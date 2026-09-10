@@ -69,7 +69,19 @@ export function saveMenuData(data: WeeklyMenuData): void {
   try {
     localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data));
   } catch (err) {
-    console.warn('Could not save menu data to localStorage', err);
+    console.warn('Could not save menu data to localStorage, attempting recovery', err);
+    try {
+      const legacyKeys = [
+        'chefs_club_weekly_menu_v4',
+        'chefs_club_weekly_menu_v3',
+        'chefs_club_weekly_menu_v2',
+        'chefs_club_weekly_menu_v1',
+      ];
+      legacyKeys.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data));
+    } catch (e2) {
+      console.error('Final attempt to save menu data failed', e2);
+    }
   }
 }
 
@@ -102,9 +114,23 @@ export function loadPhotos(): PhotoLibraryItem[] {
 
 export function savePhotos(photos: PhotoLibraryItem[]): void {
   try {
-    localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(photos));
+    // Strip redundant or bloated originalUrls from storage to protect localStorage quota
+    const lightweightPhotos = photos.map((p) => {
+      if (p.originalUrl && (p.originalUrl === p.url || p.originalUrl.length > 150000)) {
+        const { originalUrl, ...rest } = p;
+        return rest;
+      }
+      return p;
+    });
+    localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(lightweightPhotos));
   } catch (err) {
-    console.warn('Could not save photos to localStorage', err);
+    console.warn('Could not save photos to localStorage, applying quota safeguard', err);
+    try {
+      const minimalPhotos = photos.map(({ originalUrl, ...rest }) => rest);
+      localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(minimalPhotos));
+    } catch (e2) {
+      console.error('Fallback saving photos failed', e2);
+    }
   }
 }
 

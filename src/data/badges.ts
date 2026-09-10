@@ -23,6 +23,13 @@ export const DEFAULT_BADGES: DishBadge[] = [
     bgClass: 'bg-white text-slate-900 border-slate-200',
   },
   {
+    id: 'vaf',
+    label: 'VAF',
+    fullName: "Viande d'Agneau Française",
+    type: 'flag-fr',
+    bgClass: 'bg-white text-slate-900 border-slate-200',
+  },
+  {
     id: 'vvf',
     label: 'VVF',
     fullName: 'Viande de Veau Française',

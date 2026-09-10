@@ -17,7 +17,7 @@ interface TypographyModalProps {
   isOpen: boolean;
   onClose: () => void;
   menuData: WeeklyMenuData;
-  onUpdateMenu: (updated: WeeklyMenuData) => void;
+  onUpdateMenu: (updated: WeeklyMenuData | ((prev: WeeklyMenuData) => WeeklyMenuData)) => void;
   allergensList?: AllergenDef[];
   initialTab?: 'all' | 'dishTitle' | 'dishLabel' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity';
 }
@@ -57,13 +57,13 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
   const typography = menuData.typography || {};
 
   const updateTypography = (partial: Partial<TypographySettings>) => {
-    onUpdateMenu({
-      ...menuData,
+    onUpdateMenu((prev) => ({
+      ...prev,
       typography: {
-        ...menuData.typography,
+        ...prev.typography,
         ...partial,
       },
-    });
+    }));
   };
 
   const currentTitleFontClass = getFontFamilyClass(typography.dishTitleFont, 'font-sans-clean');
@@ -638,18 +638,18 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                     value={menuData.backgroundOpacity ?? 70}
                     onChange={(e) => {
                       const val = Number(e.target.value);
-                      onUpdateMenu({
-                        ...menuData,
+                      onUpdateMenu((prev) => ({
+                        ...prev,
                         backgroundOpacity: val,
-                        cover: { ...menuData.cover, backgroundOpacity: val },
+                        cover: { ...prev.cover, backgroundOpacity: val },
                         days: {
-                          monday: { ...menuData.days.monday, backgroundOpacity: val },
-                          tuesday: { ...menuData.days.tuesday, backgroundOpacity: val },
-                          wednesday: { ...menuData.days.wednesday, backgroundOpacity: val },
-                          thursday: { ...menuData.days.thursday, backgroundOpacity: val },
-                          friday: { ...menuData.days.friday, backgroundOpacity: val },
+                          monday: { ...prev.days.monday, backgroundOpacity: val },
+                          tuesday: { ...prev.days.tuesday, backgroundOpacity: val },
+                          wednesday: { ...prev.days.wednesday, backgroundOpacity: val },
+                          thursday: { ...prev.days.thursday, backgroundOpacity: val },
+                          friday: { ...prev.days.friday, backgroundOpacity: val },
                         },
-                      });
+                      }));
                     }}
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
@@ -678,18 +678,18 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                         key={preset.val}
                         type="button"
                         onClick={() => {
-                          onUpdateMenu({
-                            ...menuData,
+                          onUpdateMenu((prev) => ({
+                            ...prev,
                             backgroundOpacity: preset.val,
-                            cover: { ...menuData.cover, backgroundOpacity: preset.val },
+                            cover: { ...prev.cover, backgroundOpacity: preset.val },
                             days: {
-                              monday: { ...menuData.days.monday, backgroundOpacity: preset.val },
-                              tuesday: { ...menuData.days.tuesday, backgroundOpacity: preset.val },
-                              wednesday: { ...menuData.days.wednesday, backgroundOpacity: preset.val },
-                              thursday: { ...menuData.days.thursday, backgroundOpacity: preset.val },
-                              friday: { ...menuData.days.friday, backgroundOpacity: preset.val },
+                              monday: { ...prev.days.monday, backgroundOpacity: preset.val },
+                              tuesday: { ...prev.days.tuesday, backgroundOpacity: preset.val },
+                              wednesday: { ...prev.days.wednesday, backgroundOpacity: preset.val },
+                              thursday: { ...prev.days.thursday, backgroundOpacity: preset.val },
+                              friday: { ...prev.days.friday, backgroundOpacity: preset.val },
                             },
-                          });
+                          }));
                         }}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                           isSelected
@@ -992,10 +992,10 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                       key={s.id}
                       type="button"
                       onClick={() =>
-                        onUpdateMenu({
-                          ...menuData,
-                          cover: { ...menuData.cover, dateSize: s.id as 'md' | 'lg' | 'xl' | '2xl' },
-                        })
+                        onUpdateMenu((prev) => ({
+                          ...prev,
+                          cover: { ...prev.cover, dateSize: s.id as 'md' | 'lg' | 'xl' | '2xl' },
+                        }))
                       }
                       className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
                         isSelected

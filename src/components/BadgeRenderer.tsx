@@ -105,10 +105,10 @@ export const BadgeRenderer: React.FC<BadgeRendererProps> = ({
     );
   }
 
-  // French meat badge (flag-fr) by default for VBF, PF, VOF, VVF, VF, etc.
+  // French meat badge (flag-fr) by default for VBF, PF, VOF, VAF, VVF, VF, etc.
   const isFrenchMeat =
     badge.type === 'flag-fr' ||
-    ['vbf', 'pf', 'vof', 'vvf', 'vf', 'lpf'].includes(normalizedId.toLowerCase());
+    ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf', 'lpf'].includes(normalizedId.toLowerCase());
 
   if (isFrenchMeat) {
     return (

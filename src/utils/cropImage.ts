@@ -18,12 +18,12 @@ export const createImage = (url: string): Promise<HTMLImageElement> =>
  * Returns a cropped image Data URL based on pixel coordinates from react-easy-crop
  * @param imageSrc base64 or URL of the image
  * @param pixelCrop exact pixel bounding box {x, y, width, height}
- * @param targetDimension output square size (e.g. 800px for crisp circular plate export)
+ * @param targetDimension output square size (e.g. 600px for crisp circular plate export)
  */
 export async function getCroppedImg(
   imageSrc: string,
   pixelCrop: Area,
-  targetDimension: number = 800
+  targetDimension: number = 600
 ): Promise<string> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
@@ -52,6 +52,49 @@ export async function getCroppedImg(
     targetDimension
   );
 
-  // Return high quality JPEG Data URL
-  return canvas.toDataURL('image/jpeg', 0.92);
+  // Return high quality JPEG Data URL optimized for localStorage storage
+  return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+/**
+ * Resizes and compresses an image Data URL to fit within maxDimension
+ * Prevents localStorage QuotaExceededError when uploading phone camera photos
+ */
+export async function compressImage(
+  imageSrc: string,
+  maxDimension: number = 800,
+  quality: number = 0.82
+): Promise<string> {
+  try {
+    const image = await createImage(imageSrc);
+    let width = image.naturalWidth || image.width;
+    let height = image.naturalHeight || image.height;
+
+    if (width <= maxDimension && height <= maxDimension && imageSrc.length < 300000) {
+      return imageSrc;
+    }
+
+    if (width > maxDimension || height > maxDimension) {
+      if (width > height) {
+        height = Math.round((height * maxDimension) / width);
+        width = maxDimension;
+      } else {
+        width = Math.round((width * maxDimension) / height);
+        height = maxDimension;
+      }
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return imageSrc;
+
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL('image/jpeg', quality);
+  } catch (err) {
+    console.warn('Could not compress image', err);
+    return imageSrc;
+  }
 }

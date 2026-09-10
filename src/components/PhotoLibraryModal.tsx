@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { PhotoCategory, PhotoCategoryDef, PhotoLibraryItem } from '../types';
 import { loadPhotoCategories, savePhotoCategories, DEFAULT_PHOTO_CATEGORIES } from '../utils/storage';
 import { ImageCropModal } from './ImageCropModal';
+import { compressImage } from '../utils/cropImage';
 import {
   X,
   Upload,
@@ -168,11 +169,19 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
     setUploadName(autoTitle);
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const rawUrl = e.target?.result as string;
-      setPendingRawUrl(rawUrl);
-      setCropperTargetPhoto(null);
-      setCropperSourceImage(rawUrl);
+      if (!rawUrl) return;
+      try {
+        const optimized = await compressImage(rawUrl, 900, 0.85);
+        setPendingRawUrl(optimized);
+        setCropperTargetPhoto(null);
+        setCropperSourceImage(optimized);
+      } catch {
+        setPendingRawUrl(rawUrl);
+        setCropperTargetPhoto(null);
+        setCropperSourceImage(rawUrl);
+      }
       setIsCropperOpen(true);
     };
     reader.readAsDataURL(file);
@@ -183,10 +192,17 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
     if (!file.type.startsWith('image/') || !replaceTargetPhoto) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const rawUrl = e.target?.result as string;
-      setCropperTargetPhoto(replaceTargetPhoto);
-      setCropperSourceImage(rawUrl);
+      if (!rawUrl) return;
+      try {
+        const optimized = await compressImage(rawUrl, 900, 0.85);
+        setCropperTargetPhoto(replaceTargetPhoto);
+        setCropperSourceImage(optimized);
+      } catch {
+        setCropperTargetPhoto(replaceTargetPhoto);
+        setCropperSourceImage(rawUrl);
+      }
       setIsCropperOpen(true);
       setReplaceTargetPhoto(null);
     };

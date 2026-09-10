@@ -16,6 +16,7 @@ import { AllergenBadge } from './AllergenBadge';
 import { BadgeRenderer, BadgesList } from './BadgeRenderer';
 import { DEFAULT_BADGES } from '../data/badges';
 import { ImageCropModal } from './ImageCropModal';
+import { compressImage } from '../utils/cropImage';
 import {
   Calendar,
   Image as ImageIcon,
@@ -63,7 +64,7 @@ interface MenuEditorProps {
   menuData: WeeklyMenuData;
   activeTab: 'cover' | DayId;
   onSelectTab: (tab: 'cover' | DayId) => void;
-  onUpdateMenu: (updated: WeeklyMenuData) => void;
+  onUpdateMenu: (updated: WeeklyMenuData | ((prev: WeeklyMenuData) => WeeklyMenuData)) => void;
   backgrounds: BackgroundItem[];
   photos: PhotoLibraryItem[];
   allergensList?: AllergenDef[];
@@ -96,13 +97,13 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const typography = menuData.typography || {};
 
   const updateTypography = (partial: Partial<TypographySettings>) => {
-    onUpdateMenu({
-      ...menuData,
+    onUpdateMenu((prev) => ({
+      ...prev,
       typography: {
-        ...menuData.typography,
+        ...prev.typography,
         ...partial,
       },
-    });
+    }));
   };
 
   // ----------------- Date Synchronization (Cover -> Days) -----------------
@@ -116,91 +117,94 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
 
   // Synchronize from start date input
   const handleStartDateChange = (newStart: string) => {
-    if (!autoSyncDates) {
-      onUpdateMenu({
-        ...menuData,
-        cover: { ...menuData.cover, startDate: newStart },
-      });
-      return;
-    }
+    onUpdateMenu((prev) => {
+      if (!autoSyncDates) {
+        return {
+          ...prev,
+          cover: { ...prev.cover, startDate: newStart },
+        };
+      }
 
-    const computed = computeWeekDaysFromStartDate(newStart, menuData.cover.year);
-    if (computed) {
-      onUpdateMenu({
-        ...menuData,
-        cover: {
-          ...menuData.cover,
-          startDate: newStart,
-          endDate: computed.endDateCover,
-          year: computed.year || menuData.cover.year,
-        },
-        days: {
-          monday: { ...menuData.days.monday, dateFormatted: computed.monday },
-          tuesday: { ...menuData.days.tuesday, dateFormatted: computed.tuesday },
-          wednesday: { ...menuData.days.wednesday, dateFormatted: computed.wednesday },
-          thursday: { ...menuData.days.thursday, dateFormatted: computed.thursday },
-          friday: { ...menuData.days.friday, dateFormatted: computed.friday },
-        },
-      });
-    } else {
-      onUpdateMenu({
-        ...menuData,
-        cover: { ...menuData.cover, startDate: newStart },
-      });
-    }
+      const computed = computeWeekDaysFromStartDate(newStart, prev.cover.year);
+      if (computed) {
+        return {
+          ...prev,
+          cover: {
+            ...prev.cover,
+            startDate: newStart,
+            endDate: computed.endDateCover,
+            year: computed.year || prev.cover.year,
+          },
+          days: {
+            monday: { ...prev.days.monday, dateFormatted: computed.monday },
+            tuesday: { ...prev.days.tuesday, dateFormatted: computed.tuesday },
+            wednesday: { ...prev.days.wednesday, dateFormatted: computed.wednesday },
+            thursday: { ...prev.days.thursday, dateFormatted: computed.thursday },
+            friday: { ...prev.days.friday, dateFormatted: computed.friday },
+          },
+        };
+      } else {
+        return {
+          ...prev,
+          cover: { ...prev.cover, startDate: newStart },
+        };
+      }
+    });
   };
 
   // Synchronize from end date input
   const handleEndDateChange = (newEnd: string) => {
-    if (!autoSyncDates) {
-      onUpdateMenu({
-        ...menuData,
-        cover: { ...menuData.cover, endDate: newEnd },
-      });
-      return;
-    }
+    onUpdateMenu((prev) => {
+      if (!autoSyncDates) {
+        return {
+          ...prev,
+          cover: { ...prev.cover, endDate: newEnd },
+        };
+      }
 
-    const parsed = parseFrenchDate(newEnd, menuData.cover.year);
-    if (parsed) {
-      const fridayFormatted = `${String(parsed.day).padStart(2, '0')}/${String(parsed.month).padStart(2, '0')}`;
-      onUpdateMenu({
-        ...menuData,
-        cover: { ...menuData.cover, endDate: newEnd },
-        days: {
-          ...menuData.days,
-          friday: { ...menuData.days.friday, dateFormatted: fridayFormatted },
-        },
-      });
-    } else {
-      onUpdateMenu({
-        ...menuData,
-        cover: { ...menuData.cover, endDate: newEnd },
-      });
-    }
+      const parsed = parseFrenchDate(newEnd, prev.cover.year);
+      if (parsed) {
+        const fridayFormatted = `${String(parsed.day).padStart(2, '0')}/${String(parsed.month).padStart(2, '0')}`;
+        return {
+          ...prev,
+          cover: { ...prev.cover, endDate: newEnd },
+          days: {
+            ...prev.days,
+            friday: { ...prev.days.friday, dateFormatted: fridayFormatted },
+          },
+        };
+      } else {
+        return {
+          ...prev,
+          cover: { ...prev.cover, endDate: newEnd },
+        };
+      }
+    });
   };
 
   // Synchronize from year input
   const handleYearChange = (newYear: string) => {
-    if (autoSyncDates && menuData.cover.startDate) {
-      const computed = computeWeekDaysFromStartDate(menuData.cover.startDate, newYear);
-      if (computed) {
-        onUpdateMenu({
-          ...menuData,
-          cover: { ...menuData.cover, year: newYear, endDate: computed.endDateCover },
-          days: {
-            monday: { ...menuData.days.monday, dateFormatted: computed.monday },
-            tuesday: { ...menuData.days.tuesday, dateFormatted: computed.tuesday },
-            wednesday: { ...menuData.days.wednesday, dateFormatted: computed.wednesday },
-            thursday: { ...menuData.days.thursday, dateFormatted: computed.thursday },
-            friday: { ...menuData.days.friday, dateFormatted: computed.friday },
-          },
-        });
-        return;
+    onUpdateMenu((prev) => {
+      if (autoSyncDates && prev.cover.startDate) {
+        const computed = computeWeekDaysFromStartDate(prev.cover.startDate, newYear);
+        if (computed) {
+          return {
+            ...prev,
+            cover: { ...prev.cover, year: newYear, endDate: computed.endDateCover },
+            days: {
+              monday: { ...prev.days.monday, dateFormatted: computed.monday },
+              tuesday: { ...prev.days.tuesday, dateFormatted: computed.tuesday },
+              wednesday: { ...prev.days.wednesday, dateFormatted: computed.wednesday },
+              thursday: { ...prev.days.thursday, dateFormatted: computed.thursday },
+              friday: { ...prev.days.friday, dateFormatted: computed.friday },
+            },
+          };
+        }
       }
-    }
-    onUpdateMenu({
-      ...menuData,
-      cover: { ...menuData.cover, year: newYear },
+      return {
+        ...prev,
+        cover: { ...prev.cover, year: newYear },
+      };
     });
   };
 
@@ -218,22 +222,22 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
       const monday = new Date(y, m, d + diffToMonday);
 
       const computed = computeWeekDaysFromMondayDate(monday, true);
-      onUpdateMenu({
-        ...menuData,
+      onUpdateMenu((prev) => ({
+        ...prev,
         cover: {
-          ...menuData.cover,
+          ...prev.cover,
           startDate: computed.startDateCover,
           endDate: computed.endDateCover,
           year: computed.year,
         },
         days: {
-          monday: { ...menuData.days.monday, dateFormatted: computed.monday },
-          tuesday: { ...menuData.days.tuesday, dateFormatted: computed.tuesday },
-          wednesday: { ...menuData.days.wednesday, dateFormatted: computed.wednesday },
-          thursday: { ...menuData.days.thursday, dateFormatted: computed.thursday },
-          friday: { ...menuData.days.friday, dateFormatted: computed.friday },
+          monday: { ...prev.days.monday, dateFormatted: computed.monday },
+          tuesday: { ...prev.days.tuesday, dateFormatted: computed.tuesday },
+          wednesday: { ...prev.days.wednesday, dateFormatted: computed.wednesday },
+          thursday: { ...prev.days.thursday, dateFormatted: computed.thursday },
+          friday: { ...prev.days.friday, dateFormatted: computed.friday },
         },
-      });
+      }));
       showDateFeedback(`Semaine du ${computed.startDateCover} au ${computed.endDateCover} synchronisée`);
     }
   };
@@ -242,22 +246,22 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const handleApplyQuickWeek = (offsetWeeks: number) => {
     const monday = getMondayOfWeek(offsetWeeks);
     const computed = computeWeekDaysFromMondayDate(monday, true);
-    onUpdateMenu({
-      ...menuData,
+    onUpdateMenu((prev) => ({
+      ...prev,
       cover: {
-        ...menuData.cover,
+        ...prev.cover,
         startDate: computed.startDateCover,
         endDate: computed.endDateCover,
         year: computed.year,
       },
       days: {
-        monday: { ...menuData.days.monday, dateFormatted: computed.monday },
-        tuesday: { ...menuData.days.tuesday, dateFormatted: computed.tuesday },
-        wednesday: { ...menuData.days.wednesday, dateFormatted: computed.wednesday },
-        thursday: { ...menuData.days.thursday, dateFormatted: computed.thursday },
-        friday: { ...menuData.days.friday, dateFormatted: computed.friday },
+        monday: { ...prev.days.monday, dateFormatted: computed.monday },
+        tuesday: { ...prev.days.tuesday, dateFormatted: computed.tuesday },
+        wednesday: { ...prev.days.wednesday, dateFormatted: computed.wednesday },
+        thursday: { ...prev.days.thursday, dateFormatted: computed.thursday },
+        friday: { ...prev.days.friday, dateFormatted: computed.friday },
       },
-    });
+    }));
     showDateFeedback(`Semaine du ${computed.startDateCover} au ${computed.endDateCover} synchronisée`);
   };
 
@@ -268,22 +272,22 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
       computeWeekDaysFromEndDate(menuData.cover.endDate, menuData.cover.year);
 
     if (computed) {
-      onUpdateMenu({
-        ...menuData,
+      onUpdateMenu((prev) => ({
+        ...prev,
         cover: {
-          ...menuData.cover,
+          ...prev.cover,
           startDate: computed.startDateCover,
           endDate: computed.endDateCover,
-          year: computed.year || menuData.cover.year,
+          year: computed.year || prev.cover.year,
         },
         days: {
-          monday: { ...menuData.days.monday, dateFormatted: computed.monday },
-          tuesday: { ...menuData.days.tuesday, dateFormatted: computed.tuesday },
-          wednesday: { ...menuData.days.wednesday, dateFormatted: computed.wednesday },
-          thursday: { ...menuData.days.thursday, dateFormatted: computed.thursday },
-          friday: { ...menuData.days.friday, dateFormatted: computed.friday },
+          monday: { ...prev.days.monday, dateFormatted: computed.monday },
+          tuesday: { ...prev.days.tuesday, dateFormatted: computed.tuesday },
+          wednesday: { ...prev.days.wednesday, dateFormatted: computed.wednesday },
+          thursday: { ...prev.days.thursday, dateFormatted: computed.thursday },
+          friday: { ...prev.days.friday, dateFormatted: computed.friday },
         },
-      });
+      }));
       showDateFeedback('Dates des 5 jours synchronisées chronologiquement !');
     } else {
       showDateFeedback('Date non reconnue. Exemple: 31 Août ou 31/08');
@@ -343,13 +347,23 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const handleDirectDishFilePicked = (file: File, dishIndex: number) => {
     if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const rawUrl = e.target?.result as string;
-      setDishCropperTarget({
-        dishIndex,
-        imageSrc: rawUrl,
-        dishName: currentDay?.dishes[dishIndex]?.name || `Plat ${dishIndex + 1}`,
-      });
+      if (!rawUrl) return;
+      try {
+        const compressed = await compressImage(rawUrl, 900, 0.85);
+        setDishCropperTarget({
+          dishIndex,
+          imageSrc: compressed,
+          dishName: currentDay?.dishes[dishIndex]?.name || `Plat ${dishIndex + 1}`,
+        });
+      } catch {
+        setDishCropperTarget({
+          dishIndex,
+          imageSrc: rawUrl,
+          dishName: currentDay?.dishes[dishIndex]?.name || `Plat ${dishIndex + 1}`,
+        });
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -366,11 +380,11 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const currentTemplate = MENU_TEMPLATES[currentTemplateId] || MENU_TEMPLATES['classic-navy'];
 
   const handleSelectTemplate = (templateId: MenuTemplateId) => {
-    onUpdateMenu({
-      ...menuData,
+    onUpdateMenu((prev) => ({
+      ...prev,
       templateId,
-      backgroundOpacity: menuData.backgroundOpacity ?? 70,
-    });
+      backgroundOpacity: prev.backgroundOpacity ?? 70,
+    }));
   };
 
   // Background Opacity Controls
@@ -381,36 +395,36 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
 
   const handleOpacityChange = (newVal: number, applyAll: boolean = applyOpacityToAll) => {
     if (applyAll) {
-      onUpdateMenu({
-        ...menuData,
+      onUpdateMenu((prev) => ({
+        ...prev,
         backgroundOpacity: newVal,
-        cover: { ...menuData.cover, backgroundOpacity: newVal },
+        cover: { ...prev.cover, backgroundOpacity: newVal },
         days: {
-          monday: { ...menuData.days.monday, backgroundOpacity: newVal },
-          tuesday: { ...menuData.days.tuesday, backgroundOpacity: newVal },
-          wednesday: { ...menuData.days.wednesday, backgroundOpacity: newVal },
-          thursday: { ...menuData.days.thursday, backgroundOpacity: newVal },
-          friday: { ...menuData.days.friday, backgroundOpacity: newVal },
+          monday: { ...prev.days.monday, backgroundOpacity: newVal },
+          tuesday: { ...prev.days.tuesday, backgroundOpacity: newVal },
+          wednesday: { ...prev.days.wednesday, backgroundOpacity: newVal },
+          thursday: { ...prev.days.thursday, backgroundOpacity: newVal },
+          friday: { ...prev.days.friday, backgroundOpacity: newVal },
         },
-      });
+      }));
     } else {
       if (isCover) {
-        onUpdateMenu({
-          ...menuData,
-          cover: { ...menuData.cover, backgroundOpacity: newVal },
-        });
+        onUpdateMenu((prev) => ({
+          ...prev,
+          cover: { ...prev.cover, backgroundOpacity: newVal },
+        }));
       } else {
         const dayKey = activeTab as DayId;
-        onUpdateMenu({
-          ...menuData,
+        onUpdateMenu((prev) => ({
+          ...prev,
           days: {
-            ...menuData.days,
+            ...prev.days,
             [dayKey]: {
-              ...menuData.days[dayKey],
+              ...prev.days[dayKey],
               backgroundOpacity: newVal,
             },
           },
-        });
+        }));
       }
     }
   };
@@ -419,13 +433,17 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const updateDayData = (updater: (prev: DayMenu) => DayMenu) => {
     if (isCover) return;
     const dayKey = activeTab as DayId;
-    const updatedDay = updater(menuData.days[dayKey]);
-    onUpdateMenu({
-      ...menuData,
-      days: {
-        ...menuData.days,
-        [dayKey]: updatedDay,
-      },
+    onUpdateMenu((prevMenu) => {
+      const currentDayData = prevMenu.days[dayKey];
+      if (!currentDayData) return prevMenu;
+      const updatedDay = updater(currentDayData);
+      return {
+        ...prevMenu,
+        days: {
+          ...prevMenu.days,
+          [dayKey]: updatedDay,
+        },
+      };
     });
   };
 
@@ -938,12 +956,13 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                 <input
                   type="text"
                   value={menuData.cover.brandName}
-                  onChange={(e) =>
-                    onUpdateMenu({
-                      ...menuData,
-                      cover: { ...menuData.cover, brandName: e.target.value },
-                    })
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onUpdateMenu((prev) => ({
+                      ...prev,
+                      cover: { ...prev.cover, brandName: val },
+                    }));
+                  }}
                   className="w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500 focus:bg-white font-semibold tracking-wider uppercase shadow-2xs"
                 />
               </div>
@@ -1115,10 +1134,10 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                         key={sz.id}
                         type="button"
                         onClick={() =>
-                          onUpdateMenu({
-                            ...menuData,
-                            cover: { ...menuData.cover, dateSize: sz.id as 'md' | 'lg' | 'xl' | '2xl' },
-                          })
+                          onUpdateMenu((prev) => ({
+                            ...prev,
+                            cover: { ...prev.cover, dateSize: sz.id as 'md' | 'lg' | 'xl' | '2xl' },
+                          }))
                         }
                         className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                           isSelected
@@ -1390,20 +1409,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                           className="hidden"
                           onChange={(e) => {
                             if (e.target.files && e.target.files[0]) {
-                              const file = e.target.files[0];
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                const result = event.target?.result as string;
-                                if (result) {
-                                  updateDish(idx, { imageUrl: result });
-                                  setDishCropperTarget({
-                                    dishIndex: idx,
-                                    imageSrc: result,
-                                    dishName: dish.name || `Plat ${idx + 1}`,
-                                  });
-                                }
-                              };
-                              reader.readAsDataURL(file);
+                              handleDirectDishFilePicked(e.target.files[0], idx);
                               e.target.value = '';
                             }
                           }}
@@ -1600,7 +1606,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                             </div>
 
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {DEFAULT_BADGES.filter((b) => ['vbf', 'pf', 'vof', 'vvf', 'vf'].includes(b.id)).map((badge) => {
+                              {DEFAULT_BADGES.filter((b) => ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf'].includes(b.id)).map((badge) => {
                                 const activeDishBadges = Array.isArray(dish.badges) && dish.badges.length > 0
                                   ? dish.badges.map((b) => (b === 'viande-francaise' ? 'vf' : b))
                                   : (dish.showFrenchMeat ? ['vf'] : []);

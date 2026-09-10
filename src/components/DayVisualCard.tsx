@@ -292,12 +292,31 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
           ) : (
             <main className="relative z-10 flex-1 my-auto px-2 flex items-center justify-center">
               <div
-                className={`w-full grid ${
-                  dishCount === 2 ? 'grid-cols-2 gap-6' : 'grid-cols-3 gap-3'
+                className={`w-full relative grid ${
+                  dishCount === 2 ? 'grid-cols-2' : 'grid-cols-3'
                 } items-center`}
               >
+                {/* Dedicated Divider Lines - mathematically centered relative to the square */}
+                {dishCount === 2 && (
+                  <div
+                    style={{ backgroundColor: `${template.borderColor}35` }}
+                    className="absolute left-1/2 top-2 bottom-2 -translate-x-1/2 w-px pointer-events-none z-0"
+                  />
+                )}
+                {dishCount === 3 && (
+                  <>
+                    <div
+                      style={{ backgroundColor: `${template.borderColor}35` }}
+                      className="absolute left-1/3 top-2 bottom-2 -translate-x-1/2 w-px pointer-events-none z-0"
+                    />
+                    <div
+                      style={{ backgroundColor: `${template.borderColor}35` }}
+                      className="absolute left-2/3 top-2 bottom-2 -translate-x-1/2 w-px pointer-events-none z-0"
+                    />
+                  </>
+                )}
+
                 {dishes.map((dish, index) => {
-                  const isLast = index === dishes.length - 1;
                   const plateSize = 126;
                   const ringSize = 136;
 
@@ -332,11 +351,8 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                   return (
                     <div
                       key={dish.id || index}
-                      style={{
-                        borderColor: !isLast ? `${template.borderColor}30` : undefined,
-                      }}
-                      className={`relative h-full flex flex-col justify-center items-center text-center px-1.5 py-1 ${
-                        !isLast ? 'border-r' : ''
+                      className={`relative h-full flex flex-col justify-center items-center text-center py-1 z-10 ${
+                        dishCount === 2 ? 'px-4' : 'px-2'
                       }`}
                     >
                       {/* Centered Column Content with fixed row heights for 100% horizontal alignment */}

@@ -111,37 +111,47 @@ export default function App() {
   const handleSelectPhoto = (photoUrl: string) => {
     if (activeCoverPhotoIndex !== undefined) {
       // Cover page featured photo
-      const newFeatured = [...(menuData.cover.featuredPhotos || [])];
-      newFeatured[activeCoverPhotoIndex] = photoUrl;
-      setMenuData({
-        ...menuData,
-        cover: {
-          ...menuData.cover,
-          featuredPhotos: newFeatured,
-        },
+      const targetCoverIdx = activeCoverPhotoIndex;
+      setMenuData((prev) => {
+        const newFeatured = [...(prev.cover.featuredPhotos || [])];
+        newFeatured[targetCoverIdx] = photoUrl;
+        return {
+          ...prev,
+          cover: {
+            ...prev.cover,
+            featuredPhotos: newFeatured,
+          },
+        };
       });
       showToast('Photo de vitrine mise à jour');
     } else if (activeDishIndex !== undefined && activeTab !== 'cover') {
       // Day Dish Photo
       const dayKey = activeTab as DayId;
-      const currentDay = menuData.days[dayKey];
-      const newDishes = [...currentDay.dishes];
-      newDishes[activeDishIndex] = {
-        ...newDishes[activeDishIndex],
-        imageUrl: photoUrl,
-      };
-      setMenuData({
-        ...menuData,
-        days: {
-          ...menuData.days,
-          [dayKey]: {
-            ...currentDay,
-            dishes: newDishes,
+      const targetDishIdx = activeDishIndex;
+      setMenuData((prev) => {
+        const currentDay = prev.days[dayKey];
+        if (!currentDay) return prev;
+        const newDishes = [...currentDay.dishes];
+        if (!newDishes[targetDishIdx]) return prev;
+        newDishes[targetDishIdx] = {
+          ...newDishes[targetDishIdx],
+          imageUrl: photoUrl,
+        };
+        return {
+          ...prev,
+          days: {
+            ...prev.days,
+            [dayKey]: {
+              ...currentDay,
+              dishes: newDishes,
+            },
           },
-        },
+        };
       });
       showToast('Photo du plat mise à jour');
     }
+    setActiveDishIndex(undefined);
+    setActiveCoverPhotoIndex(undefined);
   };
 
   const handleAddCustomPhoto = (newPhoto: PhotoLibraryItem) => {
@@ -166,44 +176,45 @@ export default function App() {
 
   // Handlers for Backgrounds
   const handleSelectBackground = (bgId: string, applyToAll: boolean, opacity?: number) => {
-    const opacityToApply = opacity !== undefined ? opacity : (menuData.backgroundOpacity ?? 70);
-    if (applyToAll) {
-      setMenuData({
-        ...menuData,
-        backgroundOpacity: opacityToApply,
-        cover: { ...menuData.cover, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-        days: {
-          monday: { ...menuData.days.monday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-          tuesday: { ...menuData.days.tuesday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-          wednesday: { ...menuData.days.wednesday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-          thursday: { ...menuData.days.thursday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-          friday: { ...menuData.days.friday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-        },
-      });
-      showToast('Fond et opacité appliqués à toute la semaine');
-    } else {
-      if (activeTab === 'cover') {
-        setMenuData({
-          ...menuData,
-          cover: { ...menuData.cover, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
-        });
-      } else {
-        const dayKey = activeTab as DayId;
-        setMenuData({
-          ...menuData,
+    setMenuData((prev) => {
+      const opacityToApply = opacity !== undefined ? opacity : (prev.backgroundOpacity ?? 70);
+      if (applyToAll) {
+        return {
+          ...prev,
+          backgroundOpacity: opacityToApply,
+          cover: { ...prev.cover, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
           days: {
-            ...menuData.days,
-            [dayKey]: {
-              ...menuData.days[dayKey],
-              backgroundId: bgId,
-              customBackgroundUrl: undefined,
-              backgroundOpacity: opacityToApply,
-            },
+            monday: { ...prev.days.monday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
+            tuesday: { ...prev.days.tuesday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
+            wednesday: { ...prev.days.wednesday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
+            thursday: { ...prev.days.thursday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
+            friday: { ...prev.days.friday, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
           },
-        });
+        };
+      } else {
+        if (activeTab === 'cover') {
+          return {
+            ...prev,
+            cover: { ...prev.cover, backgroundId: bgId, customBackgroundUrl: undefined, backgroundOpacity: opacityToApply },
+          };
+        } else {
+          const dayKey = activeTab as DayId;
+          return {
+            ...prev,
+            days: {
+              ...prev.days,
+              [dayKey]: {
+                ...prev.days[dayKey],
+                backgroundId: bgId,
+                customBackgroundUrl: undefined,
+                backgroundOpacity: opacityToApply,
+              },
+            },
+          };
+        }
       }
-      showToast('Fond et opacité du visuel mis à jour');
-    }
+    });
+    showToast(applyToAll ? 'Fond et opacité appliqués à toute la semaine' : 'Fond et opacité du visuel mis à jour');
   };
 
   const handleAddCustomBackground = (newBg: BackgroundItem) => {
@@ -219,25 +230,31 @@ export default function App() {
   const handleSaveAllergens = (allergens: number[], customText?: string) => {
     if (activeDishIndex !== undefined && activeTab !== 'cover') {
       const dayKey = activeTab as DayId;
-      const currentDay = menuData.days[dayKey];
-      const newDishes = [...currentDay.dishes];
-      newDishes[activeDishIndex] = {
-        ...newDishes[activeDishIndex],
-        allergens,
-        customAllergenText: customText,
-      };
-      setMenuData({
-        ...menuData,
-        days: {
-          ...menuData.days,
-          [dayKey]: {
-            ...currentDay,
-            dishes: newDishes,
+      const targetDishIdx = activeDishIndex;
+      setMenuData((prev) => {
+        const currentDay = prev.days[dayKey];
+        if (!currentDay) return prev;
+        const newDishes = [...currentDay.dishes];
+        if (!newDishes[targetDishIdx]) return prev;
+        newDishes[targetDishIdx] = {
+          ...newDishes[targetDishIdx],
+          allergens,
+          customAllergenText: customText,
+        };
+        return {
+          ...prev,
+          days: {
+            ...prev.days,
+            [dayKey]: {
+              ...currentDay,
+              dishes: newDishes,
+            },
           },
-        },
+        };
       });
       showToast('Allergènes mis à jour');
     }
+    setActiveDishIndex(undefined);
   };
 
   const handleAddCustomAllergen = (newAllergen: AllergenDef) => {
@@ -771,7 +788,11 @@ export default function App() {
       {/* Photo Library Modal */}
       <PhotoLibraryModal
         isOpen={isPhotoModalOpen}
-        onClose={() => setIsPhotoModalOpen(false)}
+        onClose={() => {
+          setIsPhotoModalOpen(false);
+          setActiveDishIndex(undefined);
+          setActiveCoverPhotoIndex(undefined);
+        }}
         photos={photos}
         onSelectPhoto={handleSelectPhoto}
         onAddPhoto={handleAddCustomPhoto}
@@ -806,7 +827,10 @@ export default function App() {
       {selectedDishForAllergen && (
         <AllergenPickerModal
           isOpen={isAllergenModalOpen}
-          onClose={() => setIsAllergenModalOpen(false)}
+          onClose={() => {
+            setIsAllergenModalOpen(false);
+            setActiveDishIndex(undefined);
+          }}
           selectedAllergens={selectedDishForAllergen.allergens}
           customText={selectedDishForAllergen.customAllergenText}
           onSave={handleSaveAllergens}
