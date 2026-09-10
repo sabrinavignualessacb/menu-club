@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .bg-app-gradient {
+    background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
+    background-attachment: fixed;
+  }
+  .font-day-title {
+    font-family: 'Cinzel', 'Playfair Display', 'Bodoni Moda', 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: 0.06em;
+  }
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+  .font-script {
+    font-family: 'Dancing Script', 'Alex Brush', 'Caveat', cursive;
+  }
+  .font-serif-title {
+    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+  }
+  .font-cormorant {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  .font-sans-clean {
+    font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Custom scrollbars for translucent light theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(207, 217, 223, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.65);
+}
+
+

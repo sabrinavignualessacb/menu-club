@@ -1,0 +1,6 @@
+{
+  "name": "Chef's Club - Menu de la Semaine",
+  "description": "Générateur visuel et exportateur de menus de la semaine Chef's Club (format carré Instagram / PNG HD).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
