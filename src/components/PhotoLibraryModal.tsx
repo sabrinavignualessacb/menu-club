@@ -1,6 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PhotoCategory, PhotoCategoryDef, PhotoLibraryItem } from '../types';
-import { loadPhotoCategories, savePhotoCategories, DEFAULT_PHOTO_CATEGORIES } from '../utils/storage';
+import {
+  loadPhotoCategories,
+  savePhotoCategories,
+  DEFAULT_PHOTO_CATEGORIES,
+  subscribeToCloudCategories,
+  saveCategoriesToCloud,
+} from '../utils/storage';
 import { ImageCropModal } from './ImageCropModal';
 import { compressImage } from '../utils/cropImage';
 import {
@@ -49,6 +55,17 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<'all' | PhotoCategory>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Subscribe to Cloud categories in real-time
+  useEffect(() => {
+    const unsub = subscribeToCloudCategories((cloudCats) => {
+      if (cloudCats && Array.isArray(cloudCats) && cloudCats.length > 0) {
+        setCategories(cloudCats);
+        savePhotoCategories(cloudCats);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Category creation & deletion state
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -120,6 +137,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
     const next = [...categories, newCat];
     setCategories(next);
     savePhotoCategories(next);
+    saveCategoriesToCloud(next);
     setSelectedCategory(id as PhotoCategory);
     setUploadCategory(id as PhotoCategory);
     setNewCategoryName('');
@@ -133,6 +151,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
     const next = categories.filter((c) => c.id !== catId);
     setCategories(next);
     savePhotoCategories(next);
+    saveCategoriesToCloud(next);
 
     if (selectedCategory === catId) {
       setSelectedCategory('all');
@@ -159,6 +178,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   const handleResetCategories = () => {
     setCategories(DEFAULT_PHOTO_CATEGORIES);
     savePhotoCategories(DEFAULT_PHOTO_CATEGORIES);
+    saveCategoriesToCloud(DEFAULT_PHOTO_CATEGORIES);
     setSelectedCategory('all');
   };
 

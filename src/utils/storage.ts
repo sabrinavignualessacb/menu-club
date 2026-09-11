@@ -9,6 +9,9 @@ import {
   deletePhotoFromCloud,
   subscribeToCloudBackgrounds,
   saveBackgroundToCloud,
+  deleteBackgroundFromCloud,
+  subscribeToCloudCategories,
+  saveCategoriesToCloud,
 } from '../firebase/storageService';
 
 export {
@@ -19,6 +22,9 @@ export {
   deletePhotoFromCloud,
   subscribeToCloudBackgrounds,
   saveBackgroundToCloud,
+  deleteBackgroundFromCloud,
+  subscribeToCloudCategories,
+  saveCategoriesToCloud,
 };
 
 const MENU_STORAGE_KEY = 'chefs_club_weekly_menu_v5';

@@ -17,6 +17,11 @@ import {
   savePhotos,
   saveMenuToCloud,
   subscribeToCloudMenu,
+  subscribeToCloudPhotos,
+  savePhotoToCloud,
+  deletePhotoFromCloud,
+  subscribeToCloudBackgrounds,
+  saveBackgroundToCloud,
 } from './utils/storage';
 import { INITIAL_WEEKLY_MENU, DEFAULT_BACKGROUNDS, DEFAULT_PHOTOS } from './data/defaultData';
 import { DayVisualCard } from './components/DayVisualCard';
@@ -114,6 +119,73 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // 1b. Subscribe to Cloud Photos from Firestore in real-time
+  useEffect(() => {
+    const unsubscribe = subscribeToCloudPhotos(
+      (cloudPhotos) => {
+        if (cloudPhotos && Array.isArray(cloudPhotos)) {
+          setPhotos((prevLocal) => {
+            const photoMap = new Map<string, PhotoLibraryItem>();
+            DEFAULT_PHOTOS.forEach((p) => photoMap.set(p.id, p));
+
+            // Merge local photos first
+            prevLocal.forEach((p) => {
+              if (p.isCustom || !photoMap.has(p.id)) {
+                photoMap.set(p.id, p);
+              }
+            });
+
+            // Cloud photos override and take precedence
+            cloudPhotos.forEach((p) => {
+              photoMap.set(p.id, p);
+            });
+
+            const merged = Array.from(photoMap.values());
+            merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            savePhotos(merged);
+            return merged;
+          });
+        }
+      },
+      (err) => {
+        console.warn('Firebase Cloud photos sync listener issue:', err);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // 1c. Automatically push existing local custom photos to Cloud on startup so anyone with the link can see them!
+  useEffect(() => {
+    const localCustom = loadPhotos().filter((p) => p.isCustom);
+    if (localCustom.length > 0) {
+      localCustom.forEach((p) => {
+        savePhotoToCloud(p).catch((err) =>
+          console.warn('Initial push of local photo to cloud failed:', err)
+        );
+      });
+    }
+  }, []);
+
+  // 1d. Subscribe to Cloud Backgrounds from Firestore
+  useEffect(() => {
+    const unsubscribe = subscribeToCloudBackgrounds((cloudBackgrounds) => {
+      if (cloudBackgrounds && Array.isArray(cloudBackgrounds) && cloudBackgrounds.length > 0) {
+        setBackgrounds((prevLocal) => {
+          const bgMap = new Map<string, BackgroundItem>();
+          DEFAULT_BACKGROUNDS.forEach((b) => bgMap.set(b.id, b));
+          prevLocal.forEach((b) => {
+            if (b.isCustom || !bgMap.has(b.id)) bgMap.set(b.id, b);
+          });
+          cloudBackgrounds.forEach((b) => bgMap.set(b.id, b));
+          const merged = Array.from(bgMap.values());
+          saveBackgrounds(merged);
+          return merged;
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // 2. Auto-save to localStorage immediately and debounce save to Cloud Firestore
   useEffect(() => {
     saveMenuData(menuData);
@@ -138,9 +210,11 @@ export default function App() {
     setCloudSyncStatus('saving');
     try {
       await saveMenuToCloud(menuData);
+      const customPhotos = photos.filter((p) => p.isCustom);
+      await Promise.all(customPhotos.map((p) => savePhotoToCloud(p)));
       setCloudSyncStatus('synced');
       setLastCloudSyncTime(new Date());
-      showToast('Menu sauvegardé dans le Cloud (accessible partout)');
+      showToast('Menu & Bibliothèque synchronisés dans le Cloud');
     } catch (err) {
       setCloudSyncStatus('offline');
       showToast('Erreur de synchronisation cloud');
@@ -217,19 +291,42 @@ export default function App() {
     setActiveCoverPhotoIndex(undefined);
   };
 
-  const handleAddCustomPhoto = (newPhoto: PhotoLibraryItem) => {
+  const handleAddCustomPhoto = async (newPhoto: PhotoLibraryItem) => {
     setPhotos((prev) => [newPhoto, ...prev]);
-    showToast('Photo ajoutée à la bibliothèque');
+    showToast('Photo ajoutée et synchronisée au Cloud');
+    setCloudSyncStatus('saving');
+    try {
+      await savePhotoToCloud(newPhoto);
+      setCloudSyncStatus('synced');
+      setLastCloudSyncTime(new Date());
+    } catch (err) {
+      console.error('Erreur sauvegarde photo Cloud:', err);
+      setCloudSyncStatus('offline');
+    }
   };
 
-  const handleUpdatePhoto = (updatedPhoto: PhotoLibraryItem) => {
+  const handleUpdatePhoto = async (updatedPhoto: PhotoLibraryItem) => {
     setPhotos((prev) => prev.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p)));
-    showToast('Photo mise à jour');
+    showToast('Photo mise à jour dans le Cloud');
+    setCloudSyncStatus('saving');
+    try {
+      await savePhotoToCloud(updatedPhoto);
+      setCloudSyncStatus('synced');
+      setLastCloudSyncTime(new Date());
+    } catch (err) {
+      console.error('Erreur mise à jour photo Cloud:', err);
+      setCloudSyncStatus('offline');
+    }
   };
 
-  const handleDeletePhoto = (id: string) => {
+  const handleDeletePhoto = async (id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
     showToast('Photo supprimée de la bibliothèque');
+    try {
+      await deletePhotoFromCloud(id);
+    } catch (err) {
+      console.error('Erreur suppression photo Cloud:', err);
+    }
   };
 
   const handleResetDefaultPhotos = () => {
@@ -280,8 +377,14 @@ export default function App() {
     showToast(applyToAll ? 'Fond et opacité appliqués à toute la semaine' : 'Fond et opacité du visuel mis à jour');
   };
 
-  const handleAddCustomBackground = (newBg: BackgroundItem) => {
+  const handleAddCustomBackground = async (newBg: BackgroundItem) => {
     setBackgrounds((prev) => [newBg, ...prev]);
+    showToast('Fond personnalisé ajouté et synchronisé');
+    try {
+      await saveBackgroundToCloud(newBg);
+    } catch (err) {
+      console.warn('Erreur sauvegarde fond cloud:', err);
+    }
   };
 
   // Handlers for Allergens
