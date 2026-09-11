@@ -1,0 +1,161 @@
+import {
+  doc,
+  setDoc,
+  onSnapshot,
+  collection,
+  deleteDoc,
+  serverTimestamp,
+} from 'firebase/firestore';
+import { db } from './config';
+import { BackgroundItem, PhotoLibraryItem, WeeklyMenuData } from '../types';
+
+const MENU_DOC_ID = 'current_weekly_menu';
+const MENU_COLLECTION = 'menus';
+const PHOTOS_COLLECTION = 'custom_photos';
+const BACKGROUNDS_COLLECTION = 'custom_backgrounds';
+
+/**
+ * Subscribes to real-time changes of the shared weekly menu in Firestore.
+ */
+export function subscribeToCloudMenu(
+  onData: (menu: WeeklyMenuData) => void,
+  onError?: (err: Error) => void
+): () => void {
+  try {
+    const menuDocRef = doc(db, MENU_COLLECTION, MENU_DOC_ID);
+    return onSnapshot(
+      menuDocRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data && data.menu) {
+            onData(data.menu as WeeklyMenuData);
+          }
+        }
+      },
+      (error) => {
+        console.warn('Firestore menu subscription error:', error);
+        if (onError) onError(error);
+      }
+    );
+  } catch (err) {
+    console.warn('Failed to setup Firestore menu listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Persists the weekly menu to Firestore so it is accessible across all devices.
+ */
+export async function saveMenuToCloud(menu: WeeklyMenuData): Promise<void> {
+  try {
+    const menuDocRef = doc(db, MENU_COLLECTION, MENU_DOC_ID);
+    await setDoc(
+      menuDocRef,
+      {
+        menu,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (err) {
+    console.error('Error saving menu to Firestore:', err);
+    throw err;
+  }
+}
+
+/**
+ * Subscribes to real-time custom photos in Firestore.
+ */
+export function subscribeToCloudPhotos(
+  onData: (photos: PhotoLibraryItem[]) => void
+): () => void {
+  try {
+    const photosColRef = collection(db, PHOTOS_COLLECTION);
+    return onSnapshot(
+      photosColRef,
+      (snapshot) => {
+        const photos: PhotoLibraryItem[] = [];
+        snapshot.forEach((docSnap) => {
+          photos.push(docSnap.data() as PhotoLibraryItem);
+        });
+        onData(photos);
+      },
+      (error) => {
+        console.warn('Firestore photos subscription error:', error);
+      }
+    );
+  } catch (err) {
+    console.warn('Failed to setup Firestore photos listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Saves a custom photo item to Firestore.
+ */
+export async function savePhotoToCloud(photo: PhotoLibraryItem): Promise<void> {
+  try {
+    const photoDocRef = doc(db, PHOTOS_COLLECTION, photo.id);
+    await setDoc(photoDocRef, {
+      ...photo,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Error saving photo to Firestore:', err);
+  }
+}
+
+/**
+ * Deletes a custom photo item from Firestore.
+ */
+export async function deletePhotoFromCloud(photoId: string): Promise<void> {
+  try {
+    const photoDocRef = doc(db, PHOTOS_COLLECTION, photoId);
+    await deleteDoc(photoDocRef);
+  } catch (err) {
+    console.error('Error deleting photo from Firestore:', err);
+  }
+}
+
+/**
+ * Subscribes to real-time custom backgrounds in Firestore.
+ */
+export function subscribeToCloudBackgrounds(
+  onData: (backgrounds: BackgroundItem[]) => void
+): () => void {
+  try {
+    const bgColRef = collection(db, BACKGROUNDS_COLLECTION);
+    return onSnapshot(
+      bgColRef,
+      (snapshot) => {
+        const bgs: BackgroundItem[] = [];
+        snapshot.forEach((docSnap) => {
+          bgs.push(docSnap.data() as BackgroundItem);
+        });
+        onData(bgs);
+      },
+      (error) => {
+        console.warn('Firestore backgrounds subscription error:', error);
+      }
+    );
+  } catch (err) {
+    console.warn('Failed to setup Firestore backgrounds listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * Saves a custom background to Firestore.
+ */
+export async function saveBackgroundToCloud(bg: BackgroundItem): Promise<void> {
+  try {
+    const bgDocRef = doc(db, BACKGROUNDS_COLLECTION, bg.id);
+    await setDoc(bgDocRef, {
+      ...bg,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('Error saving background to Firestore:', err);
+  }
+}

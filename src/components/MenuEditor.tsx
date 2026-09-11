@@ -1393,6 +1393,15 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                         <Type className="w-2.5 h-2.5 text-blue-600" />
                         <span>Police/Taille</span>
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenTypographyModal ? onOpenTypographyModal('labelPosition') : setIsTypographyOpen(true)}
+                        className="text-[10px] text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 px-2 py-1 rounded-md font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Régler la position X / Y du libellé sur le visuel"
+                      >
+                        <Sliders className="w-2.5 h-2.5 text-indigo-600" />
+                        <span>Position X/Y</span>
+                      </button>
                     </div>
 
                     <div className="flex items-center gap-1.5 flex-wrap">

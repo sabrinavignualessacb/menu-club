@@ -6,8 +6,8 @@ import { UtensilsCrossed, CalendarOff, Sparkles } from 'lucide-react';
 import { MENU_TEMPLATES } from '../data/templates';
 import {
   getFontFamilyClass,
-  getDishTitleClass,
   getDishLabelSizeClass,
+  getUniformDishTitleStyle,
 } from '../utils/typography';
 
 interface DayVisualCardProps {
@@ -290,171 +290,216 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
               </div>
             </main>
           ) : (
-            <main className="relative z-10 flex-1 my-auto px-2 flex items-center justify-center">
+            <main className="relative z-10 flex-1 my-auto px-1 flex items-center justify-center">
               <div
-                className={`w-full relative grid ${
+                className={`w-full h-full relative grid ${
                   dishCount === 2 ? 'grid-cols-2' : 'grid-cols-3'
                 } items-center`}
               >
-                {/* Dedicated Divider Lines - mathematically centered relative to the square */}
+                {/* Dedicated Divider Lines - mathematically centered relative to the total 720px square */}
                 {dishCount === 2 && (
                   <div
-                    style={{ backgroundColor: `${template.borderColor}35` }}
-                    className="absolute left-1/2 top-2 bottom-2 -translate-x-1/2 w-px pointer-events-none z-0"
+                    style={{
+                      left: '335px',
+                      background: `linear-gradient(to bottom, transparent, ${template.borderColor}35 8%, ${template.borderColor}35 92%, transparent)`,
+                    }}
+                    className="absolute top-1 bottom-1 -translate-x-1/2 w-px pointer-events-none z-0"
                   />
                 )}
                 {dishCount === 3 && (
                   <>
                     <div
-                      style={{ backgroundColor: `${template.borderColor}35` }}
-                      className="absolute left-1/3 top-2 bottom-2 -translate-x-1/2 w-px pointer-events-none z-0"
+                      style={{
+                        left: '215px',
+                        background: `linear-gradient(to bottom, transparent, ${template.borderColor}35 8%, ${template.borderColor}35 92%, transparent)`,
+                      }}
+                      className="absolute top-1 bottom-1 -translate-x-1/2 w-px pointer-events-none z-0"
                     />
                     <div
-                      style={{ backgroundColor: `${template.borderColor}35` }}
-                      className="absolute left-2/3 top-2 bottom-2 -translate-x-1/2 w-px pointer-events-none z-0"
+                      style={{
+                        left: '455px',
+                        background: `linear-gradient(to bottom, transparent, ${template.borderColor}35 8%, ${template.borderColor}35 92%, transparent)`,
+                      }}
+                      className="absolute top-1 bottom-1 -translate-x-1/2 w-px pointer-events-none z-0"
                     />
                   </>
                 )}
 
-                {dishes.map((dish, index) => {
-                  const plateSize = 126;
-                  const ringSize = 136;
+                {(() => {
+                  // Compute strictly uniform title styling across ALL dishes in this card
+                  const uniformTitleStyle = getUniformDishTitleStyle(
+                    dishes,
+                    typography?.dishTitleSize,
+                    typography?.dishTitleScale || 100,
+                    dishCount
+                  );
 
-                  const dishLabelFontClass = getFontFamilyClass(typography?.dishLabelFont, 'font-sans-clean');
-                  const dishLabelSizeClass = getDishLabelSizeClass(typography?.dishLabelSize);
-                  const dishTitleFontClass = getFontFamilyClass(typography?.dishTitleFont, 'font-sans-clean');
-                  const dishTitleClass = getDishTitleClass(dish.name, typography?.dishTitleSize);
-                  const allergenFontClass = getFontFamilyClass(typography?.allergenFont, 'font-sans-clean');
-                  const allergenSize = typography?.allergenSize || 'md';
+                  return dishes.map((dish, index) => {
+                    const plateSize = dishCount === 3 ? 116 : 128;
+                    const ringSize = dishCount === 3 ? 124 : 138;
 
-                  // Dynamic color resolution for Plat 1, Plat 2, and Autres
-                  let defaultDishTitleColor = '#001489';
-                  let defaultDishLabelColor = '#94a3b8';
-                  if (index === 0) {
-                    defaultDishTitleColor = typography?.dish1Color || '#001489';
-                    defaultDishLabelColor = typography?.dish1LabelColor || typography?.dishLabelColor || '#94a3b8';
-                  } else if (index === 1) {
-                    defaultDishTitleColor = typography?.dish2Color || '#001489';
-                    defaultDishLabelColor = typography?.dish2LabelColor || typography?.dishLabelColor || '#94a3b8';
-                  } else {
-                    defaultDishTitleColor = typography?.dishOtherColor || '#001489';
-                    defaultDishLabelColor = typography?.dishOtherLabelColor || typography?.dishLabelColor || '#94a3b8';
-                  }
+                    const dishLabelFontClass = getFontFamilyClass(typography?.dishLabelFont, 'font-sans-clean');
+                    const dishLabelSizeClass = getDishLabelSizeClass(typography?.dishLabelSize);
+                    const dishTitleFontClass = getFontFamilyClass(typography?.dishTitleFont, 'font-sans-clean');
+                    const allergenFontClass = getFontFamilyClass(typography?.allergenFont, 'font-sans-clean');
+                    const allergenSize = typography?.allergenSize || 'md';
 
-                  const resolvedDishTitleColor = dish.titleColor || defaultDishTitleColor;
-                  const resolvedDishLabelColor = dish.labelColor || defaultDishLabelColor;
+                    // Dynamic color resolution for Plat 1, Plat 2, and Autres
+                    let defaultDishTitleColor = '#001489';
+                    let defaultDishLabelColor = '#94a3b8';
+                    if (index === 0) {
+                      defaultDishTitleColor = typography?.dish1Color || '#001489';
+                      defaultDishLabelColor = typography?.dish1LabelColor || typography?.dishLabelColor || '#94a3b8';
+                    } else if (index === 1) {
+                      defaultDishTitleColor = typography?.dish2Color || '#001489';
+                      defaultDishLabelColor = typography?.dish2LabelColor || typography?.dishLabelColor || '#94a3b8';
+                    } else {
+                      defaultDishTitleColor = typography?.dishOtherColor || '#001489';
+                      defaultDishLabelColor = typography?.dishOtherLabelColor || typography?.dishLabelColor || '#94a3b8';
+                    }
 
-                  // Adjustable Plate Circle Border Thickness & Color (default refined 1.5px)
-                  const plateBorderWidth = typography?.plateBorderWidth !== undefined ? typography.plateBorderWidth : 1.5;
-                  const plateBorderColor = typography?.plateBorderColor || '#ffffff';
+                    const resolvedDishTitleColor = dish.titleColor || defaultDishTitleColor;
+                    const resolvedDishLabelColor = dish.labelColor || defaultDishLabelColor;
 
-                  return (
-                    <div
-                      key={dish.id || index}
-                      className={`relative h-full flex flex-col justify-center items-center text-center py-1 z-10 ${
-                        dishCount === 2 ? 'px-4' : 'px-2'
-                      }`}
-                    >
-                      {/* Centered Column Content with fixed row heights for 100% horizontal alignment */}
-                      <div className="w-full flex flex-col items-center justify-center my-auto">
-                        {/* Row 1: Dish Number Label (Customizable font, size, color, and label text) */}
-                        <div className="h-7 flex items-center justify-center w-full mb-1">
-                          <span
-                            style={{ color: resolvedDishLabelColor }}
-                            className={`${dishLabelFontClass} ${dishLabelSizeClass} font-bold uppercase tracking-wide text-center block w-full leading-none transition-colors`}
-                          >
-                            {dish.label || `Plat ${index + 1}`}
-                          </span>
-                        </div>
+                    // Adjustable Plate Circle Border Thickness & Color (default refined 1.5px)
+                    const plateBorderWidth = typography?.plateBorderWidth !== undefined ? typography.plateBorderWidth : 1.5;
+                    const plateBorderColor = typography?.plateBorderColor || '#ffffff';
 
-                        {/* Row 2: Dish Name (Customizable font, size & color for Plat 1, Plat 2, Autres) */}
-                        <div className="min-h-[82px] max-h-[94px] flex items-center justify-center w-full text-center px-1 mb-1">
-                          <h3
-                            style={{ color: resolvedDishTitleColor }}
-                            className={`${dishTitleFontClass} font-extrabold text-center w-full break-words whitespace-pre-line tracking-tight transition-colors ${dishTitleClass}`}
-                          >
-                            {dish.name || 'Nom du plat à renseigner'}
-                          </h3>
-                        </div>
+                    // User-adjustable X and Y position offsets for labels
+                    const globalOffsetX = typography?.dishLabelOffsetX || 0;
+                    const globalOffsetY = typography?.dishLabelOffsetY || 0;
+                    const specificOffsetX =
+                      index === 0
+                        ? typography?.dish1LabelOffsetX || 0
+                        : index === 1
+                        ? typography?.dish2LabelOffsetX || 0
+                        : typography?.dish3LabelOffsetX || 0;
+                    const specificOffsetY =
+                      index === 0
+                        ? typography?.dish1LabelOffsetY || 0
+                        : index === 1
+                        ? typography?.dish2LabelOffsetY || 0
+                        : typography?.dish3LabelOffsetY || 0;
 
-                        {/* Row 3: Dedicated Allergens Row (Customizable font & size, strict horizontal alignment) */}
-                        <div className="h-[28px] flex items-center justify-center w-full text-center mb-1">
-                          <AllergenBadge
-                            allergens={dish.allergens}
-                            customText={dish.customAllergenText}
-                            size={allergenSize}
-                            showLabel={true}
-                            allergensList={allergensList}
-                            fontClass={allergenFontClass}
-                          />
-                        </div>
+                    const totalOffsetX = (dish.labelOffsetX || 0) + specificOffsetX + globalOffsetX;
+                    const totalOffsetY = (dish.labelOffsetY || 0) + specificOffsetY + globalOffsetY;
 
-                        {/* Row 4: Dedicated Badges Row (Single-line French Meat Badges VBF, VF, LPF) */}
-                        <div className="h-[24px] flex items-center justify-center w-full text-center mb-1.5 overflow-visible">
-                          <BadgesList
-                            badges={dish.badges}
-                            showFrenchMeat={dish.showFrenchMeat}
-                            size="md"
-                          />
-                        </div>
-
-                        {/* Row 5: Circular Cutout Plate Top View (Fixed Height, centered with deep 3D realistic depth) */}
-                        <div className="h-[146px] flex items-center justify-center relative shrink-0 w-full">
-                          {/* Layer 1: Ambient Contact Floor Shadow for dramatic depth */}
+                    return (
+                      <div
+                        key={dish.id || index}
+                        className={`relative h-full flex flex-col justify-center items-center text-center py-1 z-10 ${
+                          dishCount === 2 ? 'px-4' : 'px-1.5'
+                        }`}
+                      >
+                        {/* Centered Column Content with distinct, non-overlapping rows */}
+                        <div className="w-full flex flex-col items-center justify-center my-auto">
+                          {/* Row 1: Dish Number Label with customizable X/Y positioning */}
                           <div
                             style={{
-                              width: `${plateSize - 8}px`,
-                              height: `${plateSize - 8}px`,
-                              background: 'radial-gradient(circle, rgba(0,0,0,0.60) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0) 75%)',
+                              transform: `translate(${totalOffsetX}px, ${totalOffsetY}px)`,
                             }}
-                            className="absolute rounded-full blur-[8px] translate-y-3.5 pointer-events-none opacity-90"
-                          />
-
-                          {/* Layer 2: Elevated Porcelain Plate with customizable fine border thickness */}
-                          <div
-                            style={{
-                              width: `${plateSize}px`,
-                              height: `${plateSize}px`,
-                              minWidth: `${plateSize}px`,
-                              minHeight: `${plateSize}px`,
-                              border: plateBorderWidth > 0 ? `${plateBorderWidth}px solid ${plateBorderColor}` : 'none',
-                              boxShadow:
-                                '0 20px 32px -4px rgba(0, 0, 0, 0.48), 0 10px 16px -2px rgba(0, 0, 0, 0.32), 0 3px 6px -1px rgba(0, 0, 0, 0.22), inset 0 2px 4px rgba(255, 255, 255, 0.75), inset 0 -2px 4px rgba(0, 0, 0, 0.20)',
-                            }}
-                            className="relative rounded-full overflow-hidden ring-1 ring-black/15 bg-white flex items-center justify-center mx-auto transition-all z-10"
+                            className="h-7 flex items-center justify-center w-full mb-1 shrink-0 transition-transform"
                           >
-                            {dish.imageUrl ? (
-                              <img
-                                src={dish.imageUrl}
-                                alt={dish.name}
-                                crossOrigin="anonymous"
-                                className="w-full h-full object-cover object-center"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center p-2 text-slate-400">
-                                <UtensilsCrossed
-                                  style={{ color: template.primaryColor }}
-                                  className="w-7 h-7 mb-1 opacity-40"
-                                />
-                                <span className="text-[10px] font-semibold text-slate-500">Assiette</span>
-                              </div>
-                            )}
+                            <span
+                              style={{ color: resolvedDishLabelColor }}
+                              className={`${dishLabelFontClass} ${dishLabelSizeClass} font-bold uppercase tracking-wide text-center block w-full leading-none transition-colors`}
+                            >
+                              {dish.label || `Plat ${index + 1}`}
+                            </span>
                           </div>
 
-                          {/* Subtle decorative ring accent matching template accent */}
-                          <div
-                            style={{
-                              width: `${ringSize}px`,
-                              height: `${ringSize}px`,
-                              borderColor: `${template.accentColor}55`,
-                            }}
-                            className="absolute rounded-full border pointer-events-none z-0"
-                          />
+                          {/* Row 2: Dish Name (STRICTLY UNIFORM font size across all dish slots, anti-overflow clamp) */}
+                          <div className="h-[88px] flex items-center justify-center w-full text-center px-1 mb-1 overflow-hidden shrink-0">
+                            <h3
+                              style={{
+                                ...uniformTitleStyle,
+                                color: resolvedDishTitleColor,
+                              }}
+                              className={`${dishTitleFontClass} font-extrabold text-center w-full break-words tracking-tight line-clamp-3 transition-colors`}
+                            >
+                              {dish.name || 'Nom du plat à renseigner'}
+                            </h3>
+                          </div>
+
+                          {/* Row 3: Dedicated Allergens Row (Safe bounds to prevent collision) */}
+                          <div className="h-[28px] flex items-center justify-center w-full text-center mb-1 overflow-hidden shrink-0">
+                            <AllergenBadge
+                              allergens={dish.allergens}
+                              customText={dish.customAllergenText}
+                              size={dishCount === 3 ? 'sm' : allergenSize}
+                              showLabel={dishCount === 2}
+                              allergensList={allergensList}
+                              fontClass={allergenFontClass}
+                            />
+                          </div>
+
+                          {/* Row 4: Dedicated Badges Row (Single-line French Meat Badges VBF, VF, LPF) */}
+                          <div className="h-[24px] flex items-center justify-center w-full text-center mb-1.5 overflow-hidden shrink-0">
+                            <BadgesList
+                              badges={dish.badges}
+                              showFrenchMeat={dish.showFrenchMeat}
+                              size={dishCount === 3 ? 'sm' : 'md'}
+                            />
+                          </div>
+
+                          {/* Row 5: Circular Cutout Plate Top View (Sized cleanly to avoid overlapping) */}
+                          <div className="h-[144px] flex items-center justify-center relative shrink-0 w-full">
+                            {/* Layer 1: Ambient Contact Floor Shadow for dramatic depth */}
+                            <div
+                              style={{
+                                width: `${plateSize - 8}px`,
+                                height: `${plateSize - 8}px`,
+                                background: 'radial-gradient(circle, rgba(0,0,0,0.60) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0) 75%)',
+                              }}
+                              className="absolute rounded-full blur-[7px] translate-y-3 pointer-events-none opacity-90"
+                            />
+
+                            {/* Layer 2: Elevated Porcelain Plate with customizable fine border thickness */}
+                            <div
+                              style={{
+                                width: `${plateSize}px`,
+                                height: `${plateSize}px`,
+                                minWidth: `${plateSize}px`,
+                                minHeight: `${plateSize}px`,
+                                border: plateBorderWidth > 0 ? `${plateBorderWidth}px solid ${plateBorderColor}` : 'none',
+                                boxShadow:
+                                  '0 18px 30px -4px rgba(0, 0, 0, 0.45), 0 8px 14px -2px rgba(0, 0, 0, 0.30), 0 3px 6px -1px rgba(0, 0, 0, 0.20), inset 0 2px 4px rgba(255, 255, 255, 0.75), inset 0 -2px 4px rgba(0, 0, 0, 0.20)',
+                              }}
+                              className="relative rounded-full overflow-hidden ring-1 ring-black/15 bg-white flex items-center justify-center mx-auto transition-all z-10"
+                            >
+                              {dish.imageUrl ? (
+                                <img
+                                  src={dish.imageUrl}
+                                  alt={dish.name}
+                                  crossOrigin="anonymous"
+                                  className="w-full h-full object-cover object-center"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-slate-50 flex flex-col items-center justify-center p-2 text-slate-400">
+                                  <UtensilsCrossed
+                                    style={{ color: template.primaryColor }}
+                                    className="w-7 h-7 mb-1 opacity-40"
+                                  />
+                                  <span className="text-[10px] font-semibold text-slate-500">Assiette</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Subtle decorative ring accent matching template accent */}
+                            <div
+                              style={{
+                                width: `${ringSize}px`,
+                                height: `${ringSize}px`,
+                                borderColor: `${template.accentColor}55`,
+                              }}
+                              className="absolute rounded-full border pointer-events-none z-0"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </main>
           )}

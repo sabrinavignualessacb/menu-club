@@ -8,6 +8,7 @@ import {
   COVER_DATE_SIZE_OPTIONS,
   getFontFamilyClass,
   getDishTitleClass,
+  getDishTitleStyle,
   getDishLabelSizeClass,
 } from '../utils/typography';
 import { AllergenBadge } from './AllergenBadge';
@@ -50,7 +51,8 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
   allergensList,
   initialTab = 'all',
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'all' | 'dishTitle' | 'dishLabel' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity'>(initialTab);
+  const [activeSubTab, setActiveSubTab] = useState<'all' | 'dishTitle' | 'dishLabel' | 'labelPosition' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity'>(initialTab);
+  const [positionTarget, setPositionTarget] = useState<'all' | 'dish1' | 'dish2' | 'dish3'>('all');
 
   if (!isOpen) return null;
 
@@ -195,6 +197,18 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
             }`}
           >
             2. Libellés (Plat 1, Plat 2...)
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('labelPosition')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeSubTab === 'labelPosition'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-200/60 border border-slate-200'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Position X/Y Libellés</span>
           </button>
           <button
             type="button"
@@ -727,8 +741,16 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                   Aperçu en direct
                 </span>
                 <h4
-                  style={{ color: dish1TitleColor }}
-                  className={`${currentTitleFontClass} font-extrabold text-center max-w-lg ${currentTitleSizeClass}`}
+                  style={{
+                    color: dish1TitleColor,
+                    ...getDishTitleStyle(
+                      'Dos de cabillaud rôti aux herbes de Provence & écrasé de pommes de terre',
+                      typography.dishTitleSize,
+                      typography.dishTitleScale || 100,
+                      2
+                    ),
+                  }}
+                  className={`${currentTitleFontClass} font-extrabold text-center max-w-lg transition-all`}
                 >
                   Dos de cabillaud rôti aux herbes de Provence &amp; écrasé de pommes de terre
                 </h4>
@@ -769,9 +791,9 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
               {/* Size Selector Buttons */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Taille du texte du plat :
+                  Taille du texte du plat (Préréglages) :
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
                   {DISH_TITLE_SIZE_OPTIONS.map((s) => {
                     const isSelected = (typography.dishTitleSize || 'md') === s.id;
                     return (
@@ -779,9 +801,9 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                         key={s.id}
                         type="button"
                         onClick={() => updateTypography({ dishTitleSize: s.id as TypographySettings['dishTitleSize'] })}
-                        className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                        className={`px-2.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
                           isSelected
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-300'
                             : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-200'
                         }`}
                       >
@@ -789,6 +811,34 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Fine-Tuning Slider for Dish Title Size */}
+              <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                  <span className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-blue-600" />
+                    Ajustement fin de la taille du titre :
+                  </span>
+                  <span className="font-mono font-bold text-blue-700">
+                    {typography.dishTitleScale || 100}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="75"
+                  max="150"
+                  step="5"
+                  value={typography.dishTitleScale || 100}
+                  onChange={(e) => updateTypography({ dishTitleScale: parseInt(e.target.value, 10) })}
+                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400 font-semibold">
+                  <span>75% (Plus petit)</span>
+                  <span>100% (Standard)</span>
+                  <span>125% (Très grand)</span>
+                  <span>150% (Géant)</span>
                 </div>
               </div>
             </div>
@@ -879,6 +929,263 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                   })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* SECTION: POSITION RÉGLABLE DES LIBELLÉS (X / Y) */}
+          {(activeSubTab === 'all' || activeSubTab === 'labelPosition' || activeSubTab === 'dishLabel') && (
+            <div id="section-label-position" className="p-4 bg-gradient-to-br from-indigo-50/70 via-blue-50/40 to-slate-50 rounded-2xl border border-indigo-200/80 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="p-1 rounded-md bg-indigo-600 text-white">
+                    <Sliders className="w-4 h-4" />
+                  </span>
+                  <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wide">
+                    Position Réglable des Libellés (Axe X &amp; Y)
+                  </h3>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-600">
+                  Déplacez les libellés (&laquo; Plat 1 &raquo;, &laquo; Plat 2 &raquo;, &laquo; Plat 3 &raquo;) sur le visuel
+                </span>
+              </div>
+
+              {/* Target Selector Tabs */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">
+                  Sélectionnez le libellé à ajuster :
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'all', label: 'Tous les libellés (Global)', desc: 'Déplace tous les libellés ensemble' },
+                    { id: 'dish1', label: 'Libellé Plat 1', desc: 'Ajuste Plat 1 spécifiquement' },
+                    { id: 'dish2', label: 'Libellé Plat 2', desc: 'Ajuste Plat 2 spécifiquement' },
+                    { id: 'dish3', label: 'Libellé Plat 3', desc: 'Ajuste Plat 3 / Autre spécifiquement' },
+                  ].map((t) => {
+                    const isSelected = positionTarget === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setPositionTarget(t.id as any)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs ring-2 ring-indigo-300'
+                            : 'bg-white text-slate-800 hover:bg-slate-100 border-slate-200'
+                        }`}
+                      >
+                        <span className="text-xs font-bold">{t.label}</span>
+                        <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
+                          {t.desc}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {(() => {
+                const currentOffsetX =
+                  positionTarget === 'all'
+                    ? typography.dishLabelOffsetX || 0
+                    : positionTarget === 'dish1'
+                    ? typography.dish1LabelOffsetX || 0
+                    : positionTarget === 'dish2'
+                    ? typography.dish2LabelOffsetX || 0
+                    : typography.dish3LabelOffsetX || 0;
+
+                const currentOffsetY =
+                  positionTarget === 'all'
+                    ? typography.dishLabelOffsetY || 0
+                    : positionTarget === 'dish1'
+                    ? typography.dish1LabelOffsetY || 0
+                    : positionTarget === 'dish2'
+                    ? typography.dish2LabelOffsetY || 0
+                    : typography.dish3LabelOffsetY || 0;
+
+                const updateCurrentOffset = (x?: number, y?: number) => {
+                  if (positionTarget === 'all') {
+                    updateTypography({
+                      ...(x !== undefined ? { dishLabelOffsetX: x } : {}),
+                      ...(y !== undefined ? { dishLabelOffsetY: y } : {}),
+                    });
+                  } else if (positionTarget === 'dish1') {
+                    updateTypography({
+                      ...(x !== undefined ? { dish1LabelOffsetX: x } : {}),
+                      ...(y !== undefined ? { dish1LabelOffsetY: y } : {}),
+                    });
+                  } else if (positionTarget === 'dish2') {
+                    updateTypography({
+                      ...(x !== undefined ? { dish2LabelOffsetX: x } : {}),
+                      ...(y !== undefined ? { dish2LabelOffsetY: y } : {}),
+                    });
+                  } else {
+                    updateTypography({
+                      ...(x !== undefined ? { dish3LabelOffsetX: x } : {}),
+                      ...(y !== undefined ? { dish3LabelOffsetY: y } : {}),
+                    });
+                  }
+                };
+
+                const resetTargetOffset = () => {
+                  updateCurrentOffset(0, 0);
+                };
+
+                return (
+                  <div className="p-4 bg-white rounded-xl border border-slate-300 shadow-2xs space-y-4">
+                    {/* Live Indicator Box */}
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-0.5">
+                          Décalage appliqué :
+                        </span>
+                        <p className="text-xs font-bold text-slate-800">
+                          {positionTarget === 'all' && 'Tous les libellés : '}
+                          {positionTarget === 'dish1' && 'Plat 1 : '}
+                          {positionTarget === 'dish2' && 'Plat 2 : '}
+                          {positionTarget === 'dish3' && 'Plat 3 : '}
+                          <span className="text-indigo-600 font-mono font-extrabold ml-1">
+                            X = {currentOffsetX > 0 ? `+${currentOffsetX}` : currentOffsetX} px
+                          </span>
+                          <span className="text-slate-400 mx-1.5">|</span>
+                          <span className="text-indigo-600 font-mono font-extrabold">
+                            Y = {currentOffsetY > 0 ? `+${currentOffsetY}` : currentOffsetY} px
+                          </span>
+                        </p>
+                      </div>
+
+                      {/* Small Live Simulation Badge */}
+                      <div className="h-10 px-4 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden min-w-[140px]">
+                        <span
+                          style={{
+                            transform: `translate(${currentOffsetX}px, ${currentOffsetY}px)`,
+                            color: dish1LabelColor,
+                          }}
+                          className={`${currentLabelFontClass} text-xs font-bold uppercase tracking-wider transition-transform`}
+                        >
+                          {positionTarget === 'all'
+                            ? 'PLAT'
+                            : positionTarget === 'dish1'
+                            ? 'PLAT 1'
+                            : positionTarget === 'dish2'
+                            ? 'PLAT 2'
+                            : 'PLAT 3'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={resetTargetOffset}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold border border-slate-300 transition-all cursor-pointer"
+                        title="Remettre ce libellé au centre (0, 0)"
+                      >
+                        Recentrer (0, 0)
+                      </button>
+                    </div>
+
+                    {/* 1. Horizontal Position Slider (X) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                        <span className="flex items-center gap-1.5 font-bold">
+                          Position Horizontale (Axe X) :
+                        </span>
+                        <span className="font-mono font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                          {currentOffsetX > 0 ? `+${currentOffsetX}` : currentOffsetX} px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-80"
+                        max="80"
+                        step="1"
+                        value={currentOffsetX}
+                        onChange={(e) => updateCurrentOffset(parseInt(e.target.value, 10), undefined)}
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-400 font-semibold px-0.5">
+                        <span>&larr; -80 px (Gauche)</span>
+                        <button
+                          type="button"
+                          onClick={() => updateCurrentOffset(0, undefined)}
+                          className="text-indigo-600 hover:underline cursor-pointer"
+                        >
+                          0 px (Centré)
+                        </button>
+                        <span>+80 px (Droite) &rarr;</span>
+                      </div>
+
+                      {/* Quick step buttons for X */}
+                      <div className="flex items-center gap-1 pt-1 flex-wrap">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase mr-1">Raccourcis X :</span>
+                        {[-20, -10, -5, 0, 5, 10, 20].map((step) => (
+                          <button
+                            key={step}
+                            type="button"
+                            onClick={() => updateCurrentOffset(step, undefined)}
+                            className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                              currentOffsetX === step
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                            }`}
+                          >
+                            {step > 0 ? `+${step}` : step}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 2. Vertical Position Slider (Y) */}
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                        <span className="flex items-center gap-1.5 font-bold">
+                          Position Verticale (Axe Y) :
+                        </span>
+                        <span className="font-mono font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                          {currentOffsetY > 0 ? `+${currentOffsetY}` : currentOffsetY} px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="-50"
+                        max="50"
+                        step="1"
+                        value={currentOffsetY}
+                        onChange={(e) => updateCurrentOffset(undefined, parseInt(e.target.value, 10))}
+                        className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-400 font-semibold px-0.5">
+                        <span>&uarr; -50 px (Vers le haut)</span>
+                        <button
+                          type="button"
+                          onClick={() => updateCurrentOffset(undefined, 0)}
+                          className="text-indigo-600 hover:underline cursor-pointer"
+                        >
+                          0 px (Normal)
+                        </button>
+                        <span>+50 px (Vers le bas) &darr;</span>
+                      </div>
+
+                      {/* Quick step buttons for Y */}
+                      <div className="flex items-center gap-1 pt-1 flex-wrap">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase mr-1">Raccourcis Y :</span>
+                        {[-15, -10, -5, 0, 5, 10, 15].map((step) => (
+                          <button
+                            key={step}
+                            type="button"
+                            onClick={() => updateCurrentOffset(undefined, step)}
+                            className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold transition-all cursor-pointer ${
+                              currentOffsetY === step
+                                ? 'bg-indigo-600 text-white shadow-2xs'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                            }`}
+                          >
+                            {step > 0 ? `+${step}` : step}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

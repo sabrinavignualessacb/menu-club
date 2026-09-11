@@ -229,12 +229,12 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
       if (onUpdatePhoto) {
         onUpdatePhoto(updated);
       }
-      // If the preview modal was open for this photo, update it too
-      if (previewPhoto && previewPhoto.id === cropperTargetPhoto.id) {
-        setPreviewPhoto(updated);
-      }
+      // Immediately apply to the dish target so the user does not have to re-enter and validate a 2nd time!
+      onSelectPhoto(croppedDataUrl);
+      setPreviewPhoto(null);
       setCropperTargetPhoto(null);
       setCropperSourceImage(null);
+      onClose();
     } else {
       // We cropped a new upload
       setPendingCroppedUrl(croppedDataUrl);

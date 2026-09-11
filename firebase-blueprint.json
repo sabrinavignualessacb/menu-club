@@ -1,0 +1,30 @@
+{
+  "entities": {
+    "Dish": {
+      "collection": "dishes",
+      "fields": {
+        "id": "string",
+        "name": "string",
+        "url": "string",
+        "category": "string",
+        "allergens": "array",
+        "customAllergenText": "string",
+        "isCustom": "boolean",
+        "badges": "array",
+        "showFrenchMeat": "boolean",
+        "createdAt": "number",
+        "updatedAt": "number"
+      }
+    },
+    "AppData": {
+      "collection": "app_data",
+      "fields": {
+        "weeklyMenu": "object",
+        "backgrounds": "array",
+        "categories": "array",
+        "allergens": "array",
+        "updatedAt": "number"
+      }
+    }
+  }
+}

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Download, Archive, Loader2, SlidersHorizontal, CheckCircle2 } from 'lucide-react';
+import { Download, Archive, Loader2, SlidersHorizontal, CheckCircle2, FileText, ChevronDown } from 'lucide-react';
 import { ExportProgress, ExportResolution } from '../utils/exportImage';
 
 interface ExportToolbarProps {
   onExportCurrent: (resolution: ExportResolution) => Promise<void>;
   onExportAll: (resolution: ExportResolution) => Promise<void>;
+  onExportCurrentPdf?: (resolution: ExportResolution) => Promise<void>;
+  onExportAllPdf?: (resolution: ExportResolution) => Promise<void>;
   isExporting: boolean;
   exportProgress: ExportProgress | null;
   activeTabLabel: string;
@@ -13,12 +15,15 @@ interface ExportToolbarProps {
 export const ExportToolbar: React.FC<ExportToolbarProps> = ({
   onExportCurrent,
   onExportAll,
+  onExportCurrentPdf,
+  onExportAllPdf,
   isExporting,
   exportProgress,
   activeTabLabel,
 }) => {
   const [resolution, setResolution] = useState<ExportResolution>(1080);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPdfMenu, setShowPdfMenu] = useState(false);
 
   return (
     <div className="bg-white/45 backdrop-blur-md border border-white/60 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 text-slate-800">
@@ -122,32 +127,82 @@ export const ExportToolbar: React.FC<ExportToolbarProps> = ({
           )}
         </div>
 
-        {/* Export Current Page Button */}
+        {/* Export Current Page Button (PNG) */}
         <button
           onClick={() => onExportCurrent(resolution)}
           disabled={isExporting}
           className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer"
+          title={`Exporter l'image PNG carrée (${resolution}x${resolution}px)`}
         >
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Download className="w-4 h-4" />
           )}
-          <span>Exporter {activeTabLabel} ({resolution}p)</span>
+          <span>Exporter PNG ({resolution}p)</span>
         </button>
 
-        {/* Export ALL 6 Pages (ZIP) Button */}
+        {/* PDF Export Dropdown / Buttons */}
+        <div className="relative">
+          <button
+            onClick={() => setShowPdfMenu(!showPdfMenu)}
+            disabled={isExporting}
+            className="px-3.5 py-2.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Exporter en format PDF haute qualité"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Export PDF</span>
+            <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+          </button>
+
+          {showPdfMenu && (
+            <div className="absolute right-0 bottom-full mb-2 w-56 bg-white/95 backdrop-blur-xl border border-white/90 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in text-slate-800">
+              <span className="text-[10px] font-bold uppercase text-slate-500 px-2 py-1 block">
+                Format Document PDF
+              </span>
+              <button
+                onClick={() => {
+                  setShowPdfMenu(false);
+                  if (onExportCurrentPdf) onExportCurrentPdf(resolution);
+                }}
+                className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-rose-50 text-slate-800 transition-colors flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4 text-rose-600 shrink-0" />
+                <div>
+                  <div className="font-bold">Page active en PDF</div>
+                  <div className="text-[10px] text-slate-500">Exporter {activeTabLabel}</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowPdfMenu(false);
+                  if (onExportAllPdf) onExportAllPdf(resolution);
+                }}
+                className="w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium hover:bg-rose-50 text-slate-800 transition-colors flex items-center gap-2 border-t border-slate-100 mt-1 pt-1"
+              >
+                <Archive className="w-4 h-4 text-amber-600 shrink-0" />
+                <div>
+                  <div className="font-bold">Livret complet en PDF</div>
+                  <div className="text-[10px] text-slate-500">6 pages réunies en un document</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Export ALL 6 Pages (ZIP PNG) Button */}
         <button
           onClick={() => onExportAll(resolution)}
           disabled={isExporting}
           className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-50 text-slate-950 rounded-xl text-xs font-extrabold shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+          title="Télécharger l'archive ZIP contenant les 6 visuels PNG HD"
         >
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
           ) : (
             <Archive className="w-4 h-4 text-slate-950" />
           )}
-          <span>Tout exporter ({resolution}p ZIP)</span>
+          <span>Tout exporter (ZIP PNG)</span>
         </button>
       </div>
 

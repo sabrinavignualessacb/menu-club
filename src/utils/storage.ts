@@ -1,6 +1,25 @@
 import { AllergenDef, BackgroundItem, PhotoCategoryDef, PhotoLibraryItem, WeeklyMenuData } from '../types';
 import { DEFAULT_BACKGROUNDS, DEFAULT_PHOTOS, INITIAL_WEEKLY_MENU } from '../data/defaultData';
 import { OFFICIAL_ALLERGENS } from '../data/allergens';
+import {
+  saveMenuToCloud,
+  subscribeToCloudMenu,
+  subscribeToCloudPhotos,
+  savePhotoToCloud,
+  deletePhotoFromCloud,
+  subscribeToCloudBackgrounds,
+  saveBackgroundToCloud,
+} from '../firebase/storageService';
+
+export {
+  saveMenuToCloud,
+  subscribeToCloudMenu,
+  subscribeToCloudPhotos,
+  savePhotoToCloud,
+  deletePhotoFromCloud,
+  subscribeToCloudBackgrounds,
+  saveBackgroundToCloud,
+};
 
 const MENU_STORAGE_KEY = 'chefs_club_weekly_menu_v5';
 const PHOTOS_STORAGE_KEY = 'chefs_club_photo_library_v5';

@@ -17,6 +17,8 @@ export interface Dish {
   label?: string; // Custom label, e.g., "Plat 1", "Plat 2", "Entrée", "Dessert", "Salade"
   titleColor?: string; // Custom title color override (e.g., #001489)
   labelColor?: string; // Custom label color override
+  labelOffsetX?: number; // Custom horizontal offset in px (-50 to +50)
+  labelOffsetY?: number; // Custom vertical offset in px (-50 to +50)
   allergens: number[]; // Numbers 1 to 14 or custom numbers
   customAllergenText?: string;
   showFrenchMeat: boolean;
@@ -26,9 +28,18 @@ export interface Dish {
 
 export interface TypographySettings {
   dishTitleFont?: 'sans' | 'outfit' | 'playfair' | 'cormorant' | 'cinzel' | 'script';
-  dishTitleSize?: 'sm' | 'md' | 'lg' | 'xl';
+  dishTitleSize?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  dishTitleScale?: number; // Percentage 70% to 160% (default 100)
   dishLabelFont?: 'sans' | 'outfit' | 'playfair' | 'cormorant' | 'cinzel' | 'script';
   dishLabelSize?: 'sm' | 'md' | 'lg' | 'xl';
+  dishLabelOffsetX?: number; // Global horizontal offset for dish labels in px
+  dishLabelOffsetY?: number; // Global vertical offset for dish labels in px
+  dish1LabelOffsetX?: number;
+  dish1LabelOffsetY?: number;
+  dish2LabelOffsetX?: number;
+  dish2LabelOffsetY?: number;
+  dish3LabelOffsetX?: number;
+  dish3LabelOffsetY?: number;
   allergenFont?: 'sans' | 'outfit' | 'playfair' | 'cormorant' | 'cinzel' | 'script';
   allergenSize?: 'sm' | 'md' | 'lg';
   coverDateSize?: 'md' | 'lg' | 'xl' | '2xl';
