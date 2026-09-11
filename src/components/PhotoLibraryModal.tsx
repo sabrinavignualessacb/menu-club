@@ -26,6 +26,12 @@ import {
   RotateCcw,
   Tag,
   AlertCircle,
+  Download,
+  Copy,
+  ArrowUpDown,
+  FileJson,
+  ExternalLink,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface PhotoLibraryModalProps {
@@ -37,6 +43,7 @@ interface PhotoLibraryModalProps {
   onDeletePhoto: (id: string) => void;
   onUpdatePhoto?: (updatedPhoto: PhotoLibraryItem) => void;
   onResetDefaultPhotos?: () => void;
+  onImportPhotos?: (importedPhotos: PhotoLibraryItem[]) => void;
   currentSelectedUrl?: string;
 }
 
@@ -49,12 +56,23 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   onDeletePhoto,
   onUpdatePhoto,
   onResetDefaultPhotos,
+  onImportPhotos,
   currentSelectedUrl,
 }) => {
   const [categories, setCategories] = useState<PhotoCategoryDef[]>(() => loadPhotoCategories());
   const [selectedCategory, setSelectedCategory] = useState<'all' | PhotoCategory>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Transfer & Sync Modal state (between Vercel and Cloud)
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferTab, setTransferTab] = useState<'vercel' | 'export' | 'paste'>('vercel');
+  const [pasteJsonText, setPasteJsonText] = useState('');
+  const [copiedCommand, setCopiedCommand] = useState(false);
+  const [copiedDownloadScript, setCopiedDownloadScript] = useState(false);
+  const [importStatusMessage, setImportStatusMessage] = useState<string | null>(null);
+  const [importErrorMessage, setImportErrorMessage] = useState<string | null>(null);
+  const fileInputImportRef = useRef<HTMLInputElement>(null);
 
   // Subscribe to Cloud categories in real-time
   useEffect(() => {
@@ -340,6 +358,111 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
     setPhotoToDelete(null);
   };
 
+  // Export all photos to JSON file
+  const handleExportPhotos = () => {
+    try {
+      const dataToExport = {
+        exportedAt: new Date().toISOString(),
+        version: 'chefs_club_photo_library_v5',
+        photosCount: photos.length,
+        photos,
+        categories,
+      };
+      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `photos-chefs-club-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setImportStatusMessage(`Export réussi : ${photos.length} photos téléchargées !`);
+    } catch {
+      setImportErrorMessage('Erreur lors de l’export des photos');
+    }
+  };
+
+  // Ingest photos from JSON text or file content
+  const processImportedData = (rawText: string) => {
+    try {
+      setImportErrorMessage(null);
+      if (!rawText || !rawText.trim()) {
+        throw new Error('Veuillez coller le texte JSON ou choisir un fichier.');
+      }
+
+      let parsed: any;
+      try {
+        parsed = JSON.parse(rawText.trim());
+      } catch {
+        throw new Error('Format JSON invalide. Vérifiez le texte copié.');
+      }
+
+      let itemsToImport: PhotoLibraryItem[] = [];
+      if (Array.isArray(parsed)) {
+        itemsToImport = parsed;
+      } else if (parsed && Array.isArray(parsed.photos)) {
+        itemsToImport = parsed.photos;
+        if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+          const mergedCats = [...categories];
+          parsed.categories.forEach((cat: PhotoCategoryDef) => {
+            if (!mergedCats.some((c) => c.id === cat.id)) {
+              mergedCats.push(cat);
+            }
+          });
+          setCategories(mergedCats);
+          savePhotoCategories(mergedCats);
+          saveCategoriesToCloud(mergedCats);
+        }
+      } else {
+        throw new Error('Aucun tableau de photos détecté dans ce format.');
+      }
+
+      if (itemsToImport.length === 0) {
+        throw new Error('Le fichier ou texte ne contient aucune photo.');
+      }
+
+      const validItems: PhotoLibraryItem[] = itemsToImport
+        .filter((it) => it && (typeof it.url === 'string' || typeof it.name === 'string'))
+        .map((it, idx) => ({
+          id: it.id || `photo-imported-${Date.now()}-${idx}`,
+          name: it.name || `Photo ${idx + 1}`,
+          category: it.category || 'autre',
+          url: it.url,
+          thumbnail: it.thumbnail || it.url,
+          originalUrl: it.originalUrl,
+          createdAt: it.createdAt || Date.now() - idx * 100,
+          isCustom: it.isCustom !== undefined ? it.isCustom : true,
+        }));
+
+      if (onImportPhotos) {
+        onImportPhotos(validItems);
+      } else {
+        validItems.forEach((p) => onAddPhoto(p));
+      }
+
+      setImportStatusMessage(`Succès ! ${validItems.length} photos importées et synchronisées dans le Cloud.`);
+      setPasteJsonText('');
+      setTimeout(() => {
+        setShowTransferModal(false);
+        setImportStatusMessage(null);
+      }, 2500);
+    } catch (err: any) {
+      setImportErrorMessage(err.message || 'Erreur lors de l’importation');
+    }
+  };
+
+  const handleFileImportPicked = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result;
+      if (typeof content === 'string') {
+        processImportedData(content);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md animate-in fade-in duration-200">
       <div
@@ -363,6 +486,20 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowTransferModal(true);
+                setImportErrorMessage(null);
+                setImportStatusMessage(null);
+              }}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Transférer les photos depuis Vercel ou sauvegarder la bibliothèque"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-amber-700" />
+              <span>Transférer / Synchro</span>
+            </button>
+
             {onResetDefaultPhotos && (
               <button
                 type="button"
@@ -1197,6 +1334,295 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
           }
         }}
       />
+
+      {/* Hidden file input for JSON Photo Library Import */}
+      <input
+        ref={fileInputImportRef}
+        type="file"
+        accept=".json,application/json"
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            handleFileImportPicked(e.target.files[0]);
+            e.target.value = '';
+          }
+        }}
+      />
+
+      {/* Transfer & Sync Modal Dialog */}
+      {showTransferModal && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div
+            className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                  <ArrowUpDown className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-white">
+                    Synchronisation &amp; Transfert de Photos
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    Récupérez vos 30 photos depuis Vercel ou sauvegardez votre bibliothèque
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTransferModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2 text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setTransferTab('vercel')}
+                className={`pb-2.5 px-3 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  transferTab === 'vercel'
+                    ? 'border-amber-600 text-amber-700 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Récupérer depuis Vercel (Recommandé)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTransferTab('export')}
+                className={`pb-2.5 px-3 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  transferTab === 'export'
+                    ? 'border-amber-600 text-amber-700 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Download className="w-3.5 h-3.5" />
+                Sauvegarder (.json)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTransferTab('paste')}
+                className={`pb-2.5 px-3 border-b-2 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                  transferTab === 'paste'
+                    ? 'border-amber-600 text-amber-700 font-bold'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <FileJson className="w-3.5 h-3.5" />
+                Coller du code JSON
+              </button>
+            </div>
+
+            {/* Content Area */}
+            <div className="p-6 overflow-y-auto space-y-5 text-slate-700 text-sm">
+              {importStatusMessage && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{importStatusMessage}</span>
+                </div>
+              )}
+
+              {importErrorMessage && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{importErrorMessage}</span>
+                </div>
+              )}
+
+              {/* TAB 1: FROM VERCEL */}
+              {transferTab === 'vercel' && (
+                <div className="space-y-4">
+                  <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-2">
+                    <h4 className="font-bold text-amber-900 text-xs uppercase tracking-wide flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-900 flex items-center justify-center text-xs font-black">
+                        !
+                      </span>
+                      Pourquoi vos photos étaient sur Vercel ?
+                    </h4>
+                    <p className="text-xs text-amber-900/90 leading-relaxed">
+                      L'application sur <strong>menu-club.vercel.app</strong> enregistrait vos photos dans la mémoire locale de votre navigateur. En faisant la manipulation ci-dessous <strong>une seule fois</strong>, vos 30 photos seront transférées et <strong>enregistrées définitivement dans le Cloud Firebase</strong>.
+                    </p>
+                  </div>
+
+                  {/* Method A: Instant script download */}
+                  <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-xs font-bold">1</span>
+                        Méthode 1 : Téléchargement automatique en 1 clic
+                      </span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-semibold">
+                        Le plus rapide
+                      </span>
+                    </div>
+
+                    <ol className="text-xs text-slate-600 space-y-1.5 list-decimal list-inside pl-1">
+                      <li>
+                        Ouvrez votre site{' '}
+                        <a
+                          href="https://menu-club.vercel.app/"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-bold text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                        >
+                          menu-club.vercel.app <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </li>
+                      <li>
+                        Appuyez sur la touche <kbd className="px-1.5 py-0.5 bg-slate-100 border border-slate-300 rounded text-slate-800 font-mono text-[10px]">F12</kbd> (ou clic droit &gt; Inspecter) et allez sur l'onglet <strong>Console</strong>.
+                      </li>
+                      <li>Copiez et collez cette commande, puis appuyez sur <strong>Entrée</strong> :</li>
+                    </ol>
+
+                    <div className="relative">
+                      <pre className="p-2.5 bg-slate-900 text-amber-300 rounded-xl font-mono text-[11px] overflow-x-auto select-all">
+                        {`(()=>{const d=localStorage.getItem('chefs_club_photo_library_v5');const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(d);a.download='photos-menu-club.json';a.click();})()`}
+                      </pre>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `(()=>{const d=localStorage.getItem('chefs_club_photo_library_v5');const a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(d);a.download='photos-menu-club.json';a.click();})()`
+                          );
+                          setCopiedDownloadScript(true);
+                          setTimeout(() => setCopiedDownloadScript(false), 2500);
+                        }}
+                        className="absolute right-2 top-2 px-2 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        {copiedDownloadScript ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copiedDownloadScript ? 'Copié !' : 'Copier'}
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-slate-500 italic">
+                      Un fichier nommé <code>photos-menu-club.json</code> est alors téléchargé sur votre ordinateur.
+                    </p>
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputImportRef.current?.click()}
+                        className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-all"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Sélectionner le fichier téléchargé pour synchroniser dans le Cloud
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Method B: Direct copy command */}
+                  <div className="border border-slate-200 rounded-2xl p-4 bg-white space-y-2 shadow-2xs">
+                    <span className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center text-xs font-bold">2</span>
+                      Méthode 2 : Copier-Coller en presse-papier
+                    </span>
+                    <p className="text-xs text-slate-600">
+                      Vous pouvez aussi exécuter dans la console de Vercel :
+                    </p>
+                    <div className="relative">
+                      <code className="block p-2 bg-slate-100 rounded-lg text-slate-800 font-mono text-xs select-all">
+                        copy(localStorage.getItem('chefs_club_photo_library_v5'))
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText("copy(localStorage.getItem('chefs_club_photo_library_v5'))");
+                          setCopiedCommand(true);
+                          setTimeout(() => setCopiedCommand(false), 2500);
+                        }}
+                        className="absolute right-2 top-1.5 px-2 py-1 rounded bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        {copiedCommand ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                        {copiedCommand ? 'Copié' : 'Copier'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Puis allez dans l'onglet <strong>Coller du code JSON</strong> ci-dessus pour le coller.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: EXPORT BACKUP */}
+              {transferTab === 'export' && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                    <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wide flex items-center gap-2">
+                      <Download className="w-4 h-4 text-amber-600" />
+                      Sauvegarder l'intégralité de vos photos
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Téléchargez un fichier de sauvegarde contenant l'ensemble de vos{' '}
+                      <strong>{photos.length} photos</strong> ainsi que vos catégories de plats.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleExportPhotos}
+                    className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
+                  >
+                    <Download className="w-4 h-4 text-amber-400" />
+                    Télécharger la sauvegarde ({photos.length} photos en .json)
+                  </button>
+                </div>
+              )}
+
+              {/* TAB 3: PASTE JSON */}
+              {transferTab === 'paste' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-600">
+                    Collez directement le contenu JSON exporté ou copié depuis votre presse-papier :
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={pasteJsonText}
+                    onChange={(e) => setPasteJsonText(e.target.value)}
+                    placeholder='[ { "id": "photo-...", "name": "Mon plat", "url": "..." }, ... ]'
+                    className="w-full p-3 font-mono text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white text-slate-900"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPasteJsonText('')}
+                      className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-xl font-semibold cursor-pointer"
+                    >
+                      Effacer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => processImportedData(pasteJsonText)}
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                    >
+                      <Check className="w-4 h-4" />
+                      Importer et synchroniser dans le Cloud
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <span>{photos.length} photo(s) actuellement dans la galerie</span>
+              <button
+                type="button"
+                onClick={() => setShowTransferModal(false)}
+                className="px-3 py-1 bg-white hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-700 font-semibold cursor-pointer"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Image Cropper Modal Layer */}
       <ImageCropModal

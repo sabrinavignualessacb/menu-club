@@ -125,6 +125,7 @@ export interface PhotoLibraryItem {
   category: PhotoCategory;
   url: string;
   originalUrl?: string;
+  thumbnail?: string;
   isCustom?: boolean;
   createdAt: number;
 }

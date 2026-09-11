@@ -334,6 +334,40 @@ export default function App() {
     showToast('Catalogue de photos par défaut restauré');
   };
 
+  const handleImportPhotos = async (importedPhotos: PhotoLibraryItem[]) => {
+    if (!importedPhotos || importedPhotos.length === 0) return;
+
+    setPhotos((prev) => {
+      const map = new Map<string, PhotoLibraryItem>();
+      DEFAULT_PHOTOS.forEach((p) => map.set(p.id, p));
+      prev.forEach((p) => map.set(p.id, p));
+      importedPhotos.forEach((p) => {
+        const isDef = DEFAULT_PHOTOS.some((d) => d.id === p.id);
+        map.set(p.id, { ...p, isCustom: !isDef });
+      });
+      const merged = Array.from(map.values());
+      merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      savePhotos(merged);
+      return merged;
+    });
+
+    setCloudSyncStatus('saving');
+    showToast(`${importedPhotos.length} photo(s) en cours de synchronisation Cloud...`);
+    try {
+      const customOnes = importedPhotos.filter((p) => !DEFAULT_PHOTOS.some((d) => d.id === p.id));
+      for (const p of customOnes) {
+        await savePhotoToCloud({ ...p, isCustom: true });
+      }
+      setCloudSyncStatus('synced');
+      setLastCloudSyncTime(new Date());
+      showToast(`${importedPhotos.length} photo(s) synchronisée(s) dans le Cloud !`);
+    } catch (err) {
+      console.warn('Erreur sauvegarde Cloud import photos:', err);
+      setCloudSyncStatus('offline');
+      showToast('Photos importées localement');
+    }
+  };
+
   // Handlers for Backgrounds
   const handleSelectBackground = (bgId: string, applyToAll: boolean, opacity?: number) => {
     setMenuData((prev) => {
@@ -1064,6 +1098,7 @@ export default function App() {
         onDeletePhoto={handleDeletePhoto}
         onUpdatePhoto={handleUpdatePhoto}
         onResetDefaultPhotos={handleResetDefaultPhotos}
+        onImportPhotos={handleImportPhotos}
         currentSelectedUrl={
           activeCoverPhotoIndex !== undefined
             ? menuData.cover.featuredPhotos?.[activeCoverPhotoIndex]
