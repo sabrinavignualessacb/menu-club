@@ -208,6 +208,7 @@ export const INITIAL_WEEKLY_MENU: WeeklyMenuData = {
         },
         {
           id: 'dish-mon-3',
+          label: 'Autres',
           name: 'Risotto crémeux aux cèpes & copeaux de parmesan',
           allergens: [7, 12],
           showFrenchMeat: false,
@@ -238,6 +239,7 @@ export const INITIAL_WEEKLY_MENU: WeeklyMenuData = {
         },
         {
           id: 'dish-tue-3',
+          label: 'Autres',
           name: 'Lasagnes végétariennes aux épinards frais & ricotta fondante',
           allergens: [1, 3, 7],
           showFrenchMeat: false,
@@ -291,6 +293,7 @@ export const INITIAL_WEEKLY_MENU: WeeklyMenuData = {
         },
         {
           id: 'dish-thu-3',
+          label: 'Autres',
           name: 'Curry doux de légumes croquants au lait de coco & riz basmati',
           allergens: [9, 10],
           showFrenchMeat: false,

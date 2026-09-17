@@ -378,13 +378,13 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
         setDishCropperTarget({
           dishIndex,
           imageSrc: compressed,
-          dishName: currentDay?.dishes[dishIndex]?.name || `Plat ${dishIndex + 1}`,
+          dishName: currentDay?.dishes[dishIndex]?.name || (dishIndex === 2 ? 'Autres' : `Plat ${dishIndex + 1}`),
         });
       } catch {
         setDishCropperTarget({
           dishIndex,
           imageSrc: rawUrl,
-          dishName: currentDay?.dishes[dishIndex]?.name || `Plat ${dishIndex + 1}`,
+          dishName: currentDay?.dishes[dishIndex]?.name || (dishIndex === 2 ? 'Autres' : `Plat ${dishIndex + 1}`),
         });
       }
     };
@@ -487,6 +487,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
         // Add a default third dish if missing
         dishes.push({
           id: `dish-${prev.id}-3`,
+          label: 'Autres',
           name: 'Plat Végétarien du Chef & garniture de saison',
           allergens: [1, 7],
           showFrenchMeat: false,
@@ -1401,11 +1402,11 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                       <label className="text-[11px] font-bold text-slate-700">Libellé :</label>
                       <input
                         type="text"
-                        value={dish.label !== undefined ? dish.label : `Plat ${idx + 1}`}
+                        value={dish.label !== undefined && dish.label !== 'Plat 3' ? dish.label : (idx === 2 ? 'Autres' : `Plat ${idx + 1}`)}
                         onChange={(e) => updateDish(idx, { label: e.target.value })}
-                        placeholder={`Plat ${idx + 1}`}
+                        placeholder={idx === 2 ? 'Autres' : `Plat ${idx + 1}`}
                         className="px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-blue-900 focus:outline-hidden focus:border-blue-500 max-w-[130px] shadow-2xs"
-                        title="Personnaliser le libellé (ex: Plat 1, Entrée, Plat du Chef, Dessert...)"
+                        title="Personnaliser le libellé (ex: Plat 1, Entrée, Plat du Chef, Dessert, Autres...)"
                       />
                       <button
                         type="button"
@@ -1456,7 +1457,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                               setDishCropperTarget({
                                 dishIndex: idx,
                                 imageSrc: dish.imageUrl,
-                                dishName: dish.name || `Plat ${idx + 1}`,
+                                dishName: dish.name || (idx === 2 ? 'Autres' : `Plat ${idx + 1}`),
                               })
                             }
                             className="text-[11px] text-amber-700 hover:text-amber-900 font-semibold flex items-center gap-1 transition-colors px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer"

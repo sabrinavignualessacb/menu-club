@@ -434,10 +434,10 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                   </div>
                 </div>
 
-                {/* 3. Autres (Plat 3, Salade...) Color */}
+                {/* 3. Autres Color */}
                 <div className="p-3 bg-white rounded-xl border border-slate-200 space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">3. AUTRES (Salade, Plat 3...)</span>
+                    <span className="text-xs font-bold text-slate-800">3. AUTRES (Salade, Entrée, etc.)</span>
                     <div
                       style={{ backgroundColor: dishOtherTitleColor }}
                       className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs"
@@ -945,7 +945,7 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                   </h3>
                 </div>
                 <span className="text-[11px] font-semibold text-slate-600">
-                  Déplacez les libellés (&laquo; Plat 1 &raquo;, &laquo; Plat 2 &raquo;, &laquo; Plat 3 &raquo;) sur le visuel
+                  Déplacez les libellés (&laquo; Plat 1 &raquo;, &laquo; Plat 2 &raquo;, &laquo; Autres &raquo;) sur le visuel
                 </span>
               </div>
 
@@ -959,7 +959,7 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                     { id: 'all', label: 'Tous les libellés (Global)', desc: 'Déplace tous les libellés ensemble' },
                     { id: 'dish1', label: 'Libellé Plat 1', desc: 'Ajuste Plat 1 spécifiquement' },
                     { id: 'dish2', label: 'Libellé Plat 2', desc: 'Ajuste Plat 2 spécifiquement' },
-                    { id: 'dish3', label: 'Libellé Plat 3', desc: 'Ajuste Plat 3 / Autre spécifiquement' },
+                    { id: 'dish3', label: 'Libellé Autres', desc: 'Ajuste Autres spécifiquement' },
                   ].map((t) => {
                     const isSelected = positionTarget === t.id;
                     return (
@@ -1042,7 +1042,7 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                           {positionTarget === 'all' && 'Tous les libellés : '}
                           {positionTarget === 'dish1' && 'Plat 1 : '}
                           {positionTarget === 'dish2' && 'Plat 2 : '}
-                          {positionTarget === 'dish3' && 'Plat 3 : '}
+                          {positionTarget === 'dish3' && 'Autres : '}
                           <span className="text-indigo-600 font-mono font-extrabold ml-1">
                             X = {currentOffsetX > 0 ? `+${currentOffsetX}` : currentOffsetX} px
                           </span>
@@ -1068,7 +1068,7 @@ export const TypographyModal: React.FC<TypographyModalProps> = ({
                             ? 'PLAT 1'
                             : positionTarget === 'dish2'
                             ? 'PLAT 2'
-                            : 'PLAT 3'}
+                            : 'AUTRES'}
                         </span>
                       </div>
 

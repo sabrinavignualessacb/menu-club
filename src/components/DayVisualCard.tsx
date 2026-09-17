@@ -406,7 +406,7 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                               style={{ color: resolvedDishLabelColor }}
                               className={`${dishLabelFontClass} ${dishLabelSizeClass} font-bold uppercase tracking-wide text-center block w-full leading-none transition-colors`}
                             >
-                              {dish.label || `Plat ${index + 1}`}
+                              {dish.label && dish.label !== 'Plat 3' ? dish.label : (index === 2 ? 'Autres' : `Plat ${index + 1}`)}
                             </span>
                           </div>
 
@@ -475,7 +475,7 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                                   onOpenPhotoModal(index);
                                 }
                               }}
-                              title={!isExporting && onOpenPhotoModal ? `Cliquer pour choisir la photo du Plat ${index + 1}` : undefined}
+                              title={!isExporting && onOpenPhotoModal ? `Cliquer pour choisir la photo pour ${index === 2 ? 'Autres' : `Plat ${index + 1}`}` : undefined}
                             >
                               {dish.imageUrl ? (
                                 <img

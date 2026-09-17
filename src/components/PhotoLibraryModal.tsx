@@ -319,7 +319,11 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
         onUpdatePhoto(updated);
       }
       // Immediately apply to the dish target so the user does not have to re-enter and validate a 2nd time!
-      onSelectPhoto(croppedDataUrl);
+      if (targetMode === 'cover') {
+        onSelectPhoto(croppedDataUrl, 'cover', targetCoverIdx);
+      } else {
+        onSelectPhoto(croppedDataUrl, targetDay, targetDishIdx);
+      }
       setPreviewPhoto(null);
       setCropperTargetPhoto(null);
       setCropperSourceImage(null);
@@ -361,7 +365,11 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
       };
       onAddPhoto(newPhotoItem);
       if (applyToTarget) {
-        onSelectPhoto(pendingCroppedUrl);
+        if (targetMode === 'cover') {
+          onSelectPhoto(pendingCroppedUrl, 'cover', targetCoverIdx);
+        } else {
+          onSelectPhoto(pendingCroppedUrl, targetDay, targetDishIdx);
+        }
         onClose();
       }
       setPendingCroppedUrl(null);
@@ -634,7 +642,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                 >
                   <option value={0}>Plat 1</option>
                   <option value={1}>Plat 2</option>
-                  <option value={2}>Plat 3</option>
+                  <option value={2}>Autres</option>
                 </select>
               </div>
             ) : (
@@ -655,7 +663,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
           <div className="text-slate-600 text-[11px] font-medium hidden sm:flex items-center gap-1">
             <span>Cliquez sur</span>
             <span className="font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">
-              « Choisir pour {targetMode === 'dish' ? `Plat ${targetDishIdx + 1}` : `Vitrine ${targetCoverIdx + 1}`} »
+              « Choisir pour {targetMode === 'dish' ? (targetDishIdx === 2 ? 'Autres' : `Plat ${targetDishIdx + 1}`) : `Vitrine ${targetCoverIdx + 1}`} »
             </span>
             <span>sur n'importe quelle photo pour l'assigner directement.</span>
           </div>
@@ -1142,13 +1150,15 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                               : targetDay === 'thursday'
                               ? 'Jeudi'
                               : 'Vendredi'
-                          } - Plat ${targetDishIdx + 1}`
+                          } - ${targetDishIdx === 2 ? 'Autres' : `Plat ${targetDishIdx + 1}`}`
                     }`}
                   >
                     <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     <span>
                       {targetMode === 'cover'
                         ? `Choisir (Vitrine ${targetCoverIdx + 1})`
+                        : targetDishIdx === 2
+                        ? 'Choisir pour Autres'
                         : `Choisir pour Plat ${targetDishIdx + 1}`}
                     </span>
                   </button>
@@ -1287,7 +1297,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                 <span>
                   {targetMode === 'cover'
                     ? `Appliquer à la Vitrine (Photo ${targetCoverIdx + 1})`
-                    : `Appliquer au Plat ${targetDishIdx + 1} (${
+                    : `Appliquer à ${targetDishIdx === 2 ? 'Autres' : `Plat ${targetDishIdx + 1}`} (${
                         targetDay === 'monday'
                           ? 'Lundi'
                           : targetDay === 'tuesday'

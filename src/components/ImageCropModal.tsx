@@ -47,7 +47,7 @@ export const ImageCropModal: React.FC<ImageCropModalProps> = ({
     if (!imageSrc || !croppedAreaPixels) return;
     try {
       setIsProcessing(true);
-      const croppedUrl = await getCroppedImg(imageSrc, croppedAreaPixels, 800);
+      const croppedUrl = await getCroppedImg(imageSrc, croppedAreaPixels, 500);
       onConfirmCrop(croppedUrl);
     } catch (err) {
       console.error('Erreur lors du recadrage de l’image', err);

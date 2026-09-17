@@ -33,7 +33,7 @@ function cleanPhotoForCloud(photo: PhotoLibraryItem): Record<string, any> {
  * Subscribes to real-time changes of the shared weekly menu in Firestore.
  */
 export function subscribeToCloudMenu(
-  onData: (menu: WeeklyMenuData) => void,
+  onData: (menu: WeeklyMenuData, clientTimestamp?: number) => void,
   onError?: (err: Error) => void
 ): () => void {
   try {
@@ -48,7 +48,7 @@ export function subscribeToCloudMenu(
         if (snapshot.exists()) {
           const data = snapshot.data();
           if (data && data.menu) {
-            onData(data.menu as WeeklyMenuData);
+            onData(data.menu as WeeklyMenuData, data.clientTimestamp || 0);
           }
         }
       },
@@ -73,6 +73,7 @@ export async function saveMenuToCloud(menu: WeeklyMenuData): Promise<void> {
       menuDocRef,
       {
         menu,
+        clientTimestamp: Date.now(),
         updatedAt: serverTimestamp(),
       },
       { merge: true }

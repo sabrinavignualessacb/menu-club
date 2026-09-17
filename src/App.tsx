@@ -114,12 +114,24 @@ export default function App() {
   menuDataRef.current = menuData;
   const isIncomingCloudUpdate = useRef(false);
   const lastSavedMenuJson = useRef<string>(JSON.stringify(menuData));
+  const lastUserEditTime = useRef<number>(0);
 
   // 1. Subscribe to Cloud Menu changes from Firestore in real-time
   useEffect(() => {
     const unsubscribe = subscribeToCloudMenu(
-      (cloudMenu) => {
+      (cloudMenu, cloudTimestamp) => {
         if (cloudMenu && cloudMenu.days && cloudMenu.cover) {
+          // If the user has made local edits in the last 4 seconds, ignore remote snapshot to prevent overwriting active work
+          const timeSinceLocalEdit = Date.now() - lastUserEditTime.current;
+          if (timeSinceLocalEdit < 4000) {
+            return;
+          }
+
+          // If the incoming cloud data is older than our latest local edit, ignore it
+          if (cloudTimestamp && cloudTimestamp < lastUserEditTime.current) {
+            return;
+          }
+
           const incomingJson = JSON.stringify(cloudMenu);
           const currentLocalJson = JSON.stringify(menuDataRef.current);
 
@@ -194,6 +206,9 @@ export default function App() {
       return;
     }
 
+    // Record local user edit timestamp
+    lastUserEditTime.current = Date.now();
+
     const currentJson = JSON.stringify(menuData);
     // If exact same data was already saved, no need to push
     if (currentJson === lastSavedMenuJson.current) {
@@ -258,6 +273,7 @@ export default function App() {
   };
 
   const handleSelectPhoto = (photoUrl: string, targetDay?: DayId | 'cover', targetDishIdx?: number) => {
+    lastUserEditTime.current = Date.now();
     // Determine destination
     const isTargetCover = targetDay === 'cover' || (targetDay === undefined && activeCoverPhotoIndex !== undefined);
 
@@ -291,7 +307,8 @@ export default function App() {
           const newIdx = newDishes.length;
           newDishes.push({
             id: `dish-${dayKey}-${newIdx + 1}`,
-            name: `Plat ${newIdx + 1}`,
+            name: newIdx === 2 ? 'Autres' : `Plat ${newIdx + 1}`,
+            label: newIdx === 2 ? 'Autres' : `Plat ${newIdx + 1}`,
             imageUrl: '',
             allergens: [],
             showFrenchMeat: false,
@@ -322,7 +339,8 @@ export default function App() {
         thursday: 'Jeudi',
         friday: 'Vendredi',
       };
-      showToast(`Photo du Plat ${targetIdx + 1} (${dayNames[dayKey] || 'Lundi'}) enregistrée avec succès !`);
+      const dishLabelText = targetIdx === 2 ? 'Autres' : `Plat ${targetIdx + 1}`;
+      showToast(`Photo pour ${dishLabelText} (${dayNames[dayKey] || 'Lundi'}) enregistrée avec succès !`);
     }
 
     setActiveDishIndex(undefined);
@@ -356,9 +374,55 @@ export default function App() {
   };
 
   const handleUpdatePhoto = async (updatedPhoto: PhotoLibraryItem) => {
+    lastUserEditTime.current = Date.now();
+    const oldPhoto = photos.find((p) => p.id === updatedPhoto.id);
+    const oldUrl = oldPhoto?.url;
+
     setPhotos((prev) => prev.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p)));
     showToast('Photo mise à jour dans le Cloud');
     setCloudSyncStatus('saving');
+
+    // If any dish or cover photo was referencing the old photo URL, update it immediately
+    if (oldUrl && oldUrl !== updatedPhoto.url) {
+      setMenuData((prev) => {
+        let changed = false;
+        const newDays = { ...prev.days };
+        (Object.keys(newDays) as DayId[]).forEach((dayKey) => {
+          const day = newDays[dayKey];
+          if (day && Array.isArray(day.dishes)) {
+            const updatedDishes = day.dishes.map((d) => {
+              if (d.imageUrl === oldUrl) {
+                changed = true;
+                return { ...d, imageUrl: updatedPhoto.url };
+              }
+              return d;
+            });
+            if (changed) {
+              newDays[dayKey] = { ...day, dishes: updatedDishes };
+            }
+          }
+        });
+
+        let newFeatured = prev.cover.featuredPhotos;
+        if (newFeatured && newFeatured.some((u) => u === oldUrl)) {
+          changed = true;
+          newFeatured = newFeatured.map((u) => (u === oldUrl ? updatedPhoto.url : u));
+        }
+
+        if (changed) {
+          return {
+            ...prev,
+            days: newDays,
+            cover: {
+              ...prev.cover,
+              featuredPhotos: newFeatured,
+            },
+          };
+        }
+        return prev;
+      });
+    }
+
     try {
       await savePhotoToCloud(updatedPhoto);
       setCloudSyncStatus('synced');
