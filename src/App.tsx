@@ -101,13 +101,27 @@ export default function App() {
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'saving' | 'offline'>('synced');
   const [lastCloudSyncTime, setLastCloudSyncTime] = useState<Date | null>(null);
 
+  // References to break circular synchronization loops
+  const menuDataRef = useRef<WeeklyMenuData>(menuData);
+  menuDataRef.current = menuData;
+  const isIncomingCloudUpdate = useRef(false);
+  const lastSavedMenuJson = useRef<string>(JSON.stringify(menuData));
+
   // 1. Subscribe to Cloud Menu changes from Firestore in real-time
   useEffect(() => {
     const unsubscribe = subscribeToCloudMenu(
       (cloudMenu) => {
         if (cloudMenu && cloudMenu.days && cloudMenu.cover) {
-          setMenuData(cloudMenu);
-          saveMenuData(cloudMenu);
+          const incomingJson = JSON.stringify(cloudMenu);
+          const currentLocalJson = JSON.stringify(menuDataRef.current);
+
+          // Only apply update if it differs from current state
+          if (incomingJson !== currentLocalJson) {
+            isIncomingCloudUpdate.current = true;
+            lastSavedMenuJson.current = incomingJson;
+            setMenuData(cloudMenu);
+            saveMenuData(cloudMenu);
+          }
           setCloudSyncStatus('synced');
           setLastCloudSyncTime(new Date());
         }
@@ -164,10 +178,24 @@ export default function App() {
   // 2. Auto-save to localStorage immediately and debounce save to Cloud Firestore
   useEffect(() => {
     saveMenuData(menuData);
+
+    // If change was caused by remote Firestore sync, do not echo it back
+    if (isIncomingCloudUpdate.current) {
+      isIncomingCloudUpdate.current = false;
+      return;
+    }
+
+    const currentJson = JSON.stringify(menuData);
+    // If exact same data was already saved, no need to push
+    if (currentJson === lastSavedMenuJson.current) {
+      return;
+    }
+
     setCloudSyncStatus('saving');
 
     const timer = setTimeout(async () => {
       try {
+        lastSavedMenuJson.current = currentJson;
         await saveMenuToCloud(menuData);
         setCloudSyncStatus('synced');
         setLastCloudSyncTime(new Date());
@@ -175,7 +203,7 @@ export default function App() {
         console.warn('Failed to sync menu to Firestore:', err);
         setCloudSyncStatus('offline');
       }
-    }, 1000);
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [menuData]);

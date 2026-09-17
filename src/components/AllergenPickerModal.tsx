@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AllergenDef } from '../types';
 import { OFFICIAL_ALLERGENS } from '../data/allergens';
 import { X, Check, AlertCircle, Plus, Edit2, Trash2, Palette } from 'lucide-react';
@@ -58,10 +58,15 @@ export const AllergenPickerModal: React.FC<AllergenPickerModalProps> = ({
   // State for editing an allergen
   const [editingAllergen, setEditingAllergen] = useState<AllergenDef | null>(null);
 
+  // Synchronize selection cleanly when opening the modal
+  const prevOpenRef = useRef(false);
   useEffect(() => {
-    setCurrentSelected(selectedAllergens || []);
-    setText(customText || '');
-  }, [selectedAllergens, customText, isOpen]);
+    if (isOpen && !prevOpenRef.current) {
+      setCurrentSelected(selectedAllergens || []);
+      setText(customText || '');
+    }
+    prevOpenRef.current = isOpen;
+  }, [isOpen, selectedAllergens, customText]);
 
   useEffect(() => {
     // Determine the next available allergen number

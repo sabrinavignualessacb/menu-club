@@ -41,6 +41,10 @@ export function subscribeToCloudMenu(
     return onSnapshot(
       menuDocRef,
       (snapshot) => {
+        // Skip local uncommitted writes to prevent race condition loops
+        if (snapshot.metadata.hasPendingWrites) {
+          return;
+        }
         if (snapshot.exists()) {
           const data = snapshot.data();
           if (data && data.menu) {

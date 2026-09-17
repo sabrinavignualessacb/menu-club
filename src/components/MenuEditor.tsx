@@ -312,16 +312,35 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   // Custom Badge Input per dish
   const [newCustomBadgeText, setNewCustomBadgeText] = useState<{ [dishIdx: number]: string }>({});
 
+  // Helper to determine meat badge when migrating legacy showFrenchMeat flag
+  const FRENCH_MEAT_IDS = ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf', 'viande-francaise'];
+  const getDishInitialMeatBadge = (dishName: string = ''): string => {
+    const lower = dishName.toLowerCase();
+    if (lower.includes('poulet') || lower.includes('volaille') || lower.includes('dinde') || lower.includes('canard')) {
+      return 'vf';
+    }
+    if (lower.includes('porc') || lower.includes('cochon') || lower.includes('jambon')) {
+      return 'pf';
+    }
+    if (lower.includes('veau')) {
+      return 'vvf';
+    }
+    if (lower.includes('agneau')) {
+      return 'vaf';
+    }
+    return 'vbf';
+  };
+
   const toggleDishBadge = (dishIdx: number, badgeId: string) => {
     if (!currentDay) return;
     const dish = currentDay.dishes[dishIdx];
     if (!dish) return;
 
     let currentBadges: string[] = [];
-    if (Array.isArray(dish.badges) && dish.badges.length > 0) {
+    if (Array.isArray(dish.badges)) {
       currentBadges = dish.badges.map((b) => (b === 'viande-francaise' ? 'vf' : b));
     } else if (dish.showFrenchMeat) {
-      currentBadges = ['vf'];
+      currentBadges = [getDishInitialMeatBadge(dish.name)];
     }
 
     let updatedBadges: string[];
@@ -331,9 +350,11 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
       updatedBadges = [...currentBadges, badgeId];
     }
 
+    const hasFrenchMeat = updatedBadges.some((id) => FRENCH_MEAT_IDS.includes(id));
+
     updateDish(dishIdx, {
       badges: updatedBadges,
-      showFrenchMeat: updatedBadges.length > 0,
+      showFrenchMeat: hasFrenchMeat,
     });
   };
 
@@ -1601,7 +1622,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                                 </span>
                                 Viandes Françaises :
                               </span>
-                              {((dish.badges && dish.badges.length > 0) || dish.showFrenchMeat) && (
+                              {((Array.isArray(dish.badges) && dish.badges.length > 0) || (!Array.isArray(dish.badges) && dish.showFrenchMeat)) && (
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1616,9 +1637,9 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
 
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {DEFAULT_BADGES.filter((b) => ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf'].includes(b.id)).map((badge) => {
-                                const activeDishBadges = Array.isArray(dish.badges) && dish.badges.length > 0
+                                const activeDishBadges = Array.isArray(dish.badges)
                                   ? dish.badges.map((b) => (b === 'viande-francaise' ? 'vf' : b))
-                                  : (dish.showFrenchMeat ? ['vf'] : []);
+                                  : (dish.showFrenchMeat ? [getDishInitialMeatBadge(dish.name)] : []);
                                 const isSelected = activeDishBadges.includes(badge.id);
                                 return (
                                   <button
@@ -1654,7 +1675,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
 
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {DEFAULT_BADGES.filter((b) => ['vegetarien', 'vegan'].includes(b.id)).map((badge) => {
-                                const activeDishBadges = Array.isArray(dish.badges) && dish.badges.length > 0
+                                const activeDishBadges = Array.isArray(dish.badges)
                                   ? dish.badges
                                   : [];
                                 const isSelected = activeDishBadges.includes(badge.id);

@@ -164,11 +164,12 @@ export const BadgesList: React.FC<BadgesListProps> = ({
   // Use explicitly selected badges from the dish
   let effectiveBadges: string[] = [];
 
-  if (Array.isArray(badges) && badges.length > 0) {
+  if (Array.isArray(badges)) {
+    // When badges array is defined (even if empty []), use it as the source of truth
     effectiveBadges = badges.map((id) => (id === 'viande-francaise' ? 'vf' : id));
   } else if (showFrenchMeat) {
-    // Only use legacy fallback if badges array is empty or undefined
-    effectiveBadges = ['vf'];
+    // Only use legacy fallback if badges is undefined
+    effectiveBadges = ['vbf'];
   }
 
   // Deduplicate while preserving user selection order
