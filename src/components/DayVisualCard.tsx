@@ -298,11 +298,11 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                   dishCount === 2 ? 'grid-cols-2' : 'grid-cols-3'
                 } items-center`}
               >
-                {/* Dedicated Divider Lines - mathematically centered relative to the total 720px square */}
+                {/* Dedicated Divider Lines - mathematically centered between grid columns */}
                 {dishCount === 2 && (
                   <div
                     style={{
-                      left: '335px',
+                      left: '50%',
                       background: `linear-gradient(to bottom, transparent, ${template.borderColor}35 8%, ${template.borderColor}35 92%, transparent)`,
                     }}
                     className="absolute top-1 bottom-1 -translate-x-1/2 w-px pointer-events-none z-0"
@@ -312,14 +312,14 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                   <>
                     <div
                       style={{
-                        left: '215px',
+                        left: 'calc(100% / 3)',
                         background: `linear-gradient(to bottom, transparent, ${template.borderColor}35 8%, ${template.borderColor}35 92%, transparent)`,
                       }}
                       className="absolute top-1 bottom-1 -translate-x-1/2 w-px pointer-events-none z-0"
                     />
                     <div
                       style={{
-                        left: '455px',
+                        left: 'calc(200% / 3)',
                         background: `linear-gradient(to bottom, transparent, ${template.borderColor}35 8%, ${template.borderColor}35 92%, transparent)`,
                       }}
                       className="absolute top-1 bottom-1 -translate-x-1/2 w-px pointer-events-none z-0"
@@ -390,7 +390,7 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                       <div
                         key={dish.id || index}
                         className={`relative h-full flex flex-col justify-center items-center text-center py-1 z-10 ${
-                          dishCount === 2 ? 'px-4' : 'px-1.5'
+                          dishCount === 2 ? 'px-4' : 'px-2.5'
                         }`}
                       >
                         {/* Centered Column Content with distinct, non-overlapping rows */}
