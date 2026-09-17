@@ -415,7 +415,7 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                                 ...uniformTitleStyle,
                                 color: resolvedDishTitleColor,
                               }}
-                              className={`${dishTitleFontClass} font-extrabold text-center w-full break-words tracking-tight line-clamp-3 transition-colors`}
+                              className={`${dishTitleFontClass} font-extrabold text-center w-full break-words tracking-tight whitespace-pre-line line-clamp-3 transition-colors`}
                             >
                               {dish.name || 'Nom du plat à renseigner'}
                             </h3>

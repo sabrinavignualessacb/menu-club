@@ -119,18 +119,20 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   if (!isOpen) return null;
 
   const sanitizedPhotos = useMemo(() => {
-    return deduplicatePhotoList(photos);
+    return deduplicatePhotoList(photos || []);
   }, [photos]);
 
-  const filteredPhotos = sanitizedPhotos.filter((p) => {
+  const filteredPhotos = (sanitizedPhotos || []).filter((p) => {
+    if (!p) return false;
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-    const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = ((p.name || '').toLowerCase()).includes((searchQuery || '').toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const getCategoryCount = (catId: 'all' | PhotoCategory) => {
+    if (!sanitizedPhotos) return 0;
     if (catId === 'all') return sanitizedPhotos.length;
-    return sanitizedPhotos.filter((p) => p.category === catId).length;
+    return sanitizedPhotos.filter((p) => p && p.category === catId).length;
   };
 
   // Add Category Handler
@@ -471,9 +473,12 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
-        className="relative w-full max-w-4xl bg-white/90 backdrop-blur-xl border border-white/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-slate-800"
+        className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[90vh] max-h-[90vh] text-slate-800"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -842,7 +847,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
               </button>
 
               {/* Dynamic Categories Buttons with Accessible Delete Cross */}
-              {categories.map((cat) => {
+              {(categories || []).filter((c) => c && c.id).map((cat) => {
                 const count = getCategoryCount(cat.id as PhotoCategory);
                 const isActive = selectedCategory === cat.id;
 
@@ -860,7 +865,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                       onClick={() => setSelectedCategory(cat.id as PhotoCategory)}
                       className="px-3 py-1.5 text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 cursor-pointer"
                     >
-                      <span>{cat.label}</span>
+                      <span>{cat.label || cat.id}</span>
                       <span
                         className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                           isActive
@@ -884,8 +889,8 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                           ? 'border-blue-500/60 text-blue-200 hover:text-white hover:bg-blue-700'
                           : 'border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50'
                       }`}
-                      title={`Supprimer la catégorie « ${cat.label} »`}
-                      aria-label={`Supprimer la catégorie ${cat.label}`}
+                      title={`Supprimer la catégorie « ${cat.label || cat.id} »`}
+                      aria-label={`Supprimer la catégorie ${cat.label || cat.id}`}
                     >
                       <X className="w-3.5 h-3.5 stroke-[2.5]" />
                     </button>
@@ -897,7 +902,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
         </div>
 
         {/* Photos Grid */}
-        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 bg-white/30">
+        <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 bg-slate-50/50">
           {filteredPhotos.length === 0 ? (
             <div className="col-span-full py-12 text-center text-slate-500">
               <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-40 text-slate-400" />
@@ -907,16 +912,16 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
               </p>
             </div>
           ) : (
-            filteredPhotos.map((photo) => {
+            filteredPhotos.filter((p) => p && p.id && p.url).map((photo) => {
               const isSelected = currentSelectedUrl === photo.url;
               return (
                 <div
                   key={photo.id}
                   onClick={() => setPreviewPhoto(photo)}
-                  className={`group relative flex flex-col items-center bg-white/80 border rounded-2xl p-3 cursor-pointer transition-all hover:border-blue-500 hover:shadow-2xl hover:scale-[1.02] ${
+                  className={`group relative flex flex-col items-center bg-white border rounded-2xl p-3 cursor-pointer transition-all hover:border-blue-500 hover:shadow-xl hover:scale-[1.02] ${
                     isSelected
                       ? 'border-blue-500 ring-2 ring-blue-400/40 bg-blue-50/50'
-                      : 'border-white/80 shadow-xs'
+                      : 'border-slate-200/90 shadow-2xs'
                   }`}
                 >
                   {/* Circular Plate Thumbnail with deep 3D shadow and hover effects */}
@@ -939,8 +944,13 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                     >
                       <img
                         src={photo.url}
-                        alt={photo.name}
+                        alt={photo.name || 'Photo de plat'}
+                        loading="lazy"
                         className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
+                        }}
                       />
                     </div>
 

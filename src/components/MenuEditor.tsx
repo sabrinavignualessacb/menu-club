@@ -71,7 +71,9 @@ interface MenuEditorProps {
   onOpenPhotoModal: (dishIndex?: number, isCoverPhotoIndex?: number) => void;
   onOpenBackgroundModal: () => void;
   onOpenAllergenModal: (dishIndex: number) => void;
-  onOpenTypographyModal?: (section?: 'all' | 'dishTitle' | 'dishLabel' | 'allergen') => void;
+  onOpenTypographyModal?: (
+    section?: 'all' | 'dishTitle' | 'dishLabel' | 'labelPosition' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity'
+  ) => void;
   onLoadExampleMenu: () => void;
 }
 

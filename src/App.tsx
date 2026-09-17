@@ -34,6 +34,7 @@ import { BackgroundLibraryModal } from './components/BackgroundLibraryModal';
 import { AllergenPickerModal } from './components/AllergenPickerModal';
 import { TypographyModal } from './components/TypographyModal';
 import { WeekGridView } from './components/WeekGridView';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   exportElementAsPng,
   exportElementAsPdf,
@@ -72,9 +73,13 @@ export default function App() {
   const [isBackgroundModalOpen, setIsBackgroundModalOpen] = useState(false);
   const [isAllergenModalOpen, setIsAllergenModalOpen] = useState(false);
   const [isTypographyModalOpen, setIsTypographyModalOpen] = useState(false);
-  const [typographyModalTab, setTypographyModalTab] = useState<'all' | 'dishTitle' | 'dishLabel' | 'allergen'>('all');
+  const [typographyModalTab, setTypographyModalTab] = useState<
+    'all' | 'dishTitle' | 'dishLabel' | 'labelPosition' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity'
+  >('all');
 
-  const handleOpenTypographyModal = (tab: 'all' | 'dishTitle' | 'dishLabel' | 'allergen' = 'all') => {
+  const handleOpenTypographyModal = (
+    tab: 'all' | 'dishTitle' | 'dishLabel' | 'labelPosition' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity' = 'all'
+  ) => {
     setTypographyModalTab(tab);
     setIsTypographyModalOpen(true);
   };
@@ -1087,28 +1092,38 @@ export default function App() {
 
       {/* 5. MODALS */}
       {/* Photo Library Modal */}
-      <PhotoLibraryModal
-        isOpen={isPhotoModalOpen}
-        onClose={() => {
+      <ErrorBoundary
+        fallbackTitle="Erreur dans la galerie de photos"
+        fallbackMessage="La galerie photo a rencontré une anomalie lors de son chargement. Vous pouvez la relancer ou la refermer."
+        onReset={() => {
           setIsPhotoModalOpen(false);
           setActiveDishIndex(undefined);
           setActiveCoverPhotoIndex(undefined);
         }}
-        photos={photos}
-        onSelectPhoto={handleSelectPhoto}
-        onAddPhoto={handleAddCustomPhoto}
-        onDeletePhoto={handleDeletePhoto}
-        onUpdatePhoto={handleUpdatePhoto}
-        onResetDefaultPhotos={handleResetDefaultPhotos}
-        onImportPhotos={handleImportPhotos}
-        currentSelectedUrl={
-          activeCoverPhotoIndex !== undefined
-            ? menuData.cover.featuredPhotos?.[activeCoverPhotoIndex]
-            : activeDishIndex !== undefined && activeTab !== 'cover'
-            ? menuData.days[activeTab as DayId]?.dishes[activeDishIndex]?.imageUrl
-            : undefined
-        }
-      />
+      >
+        <PhotoLibraryModal
+          isOpen={isPhotoModalOpen}
+          onClose={() => {
+            setIsPhotoModalOpen(false);
+            setActiveDishIndex(undefined);
+            setActiveCoverPhotoIndex(undefined);
+          }}
+          photos={photos}
+          onSelectPhoto={handleSelectPhoto}
+          onAddPhoto={handleAddCustomPhoto}
+          onDeletePhoto={handleDeletePhoto}
+          onUpdatePhoto={handleUpdatePhoto}
+          onResetDefaultPhotos={handleResetDefaultPhotos}
+          onImportPhotos={handleImportPhotos}
+          currentSelectedUrl={
+            activeCoverPhotoIndex !== undefined
+              ? menuData.cover.featuredPhotos?.[activeCoverPhotoIndex]
+              : activeDishIndex !== undefined && activeTab !== 'cover'
+              ? menuData.days[activeTab as DayId]?.dishes[activeDishIndex]?.imageUrl
+              : undefined
+          }
+        />
+      </ErrorBoundary>
 
       {/* Background Library Modal */}
       <BackgroundLibraryModal

@@ -20,7 +20,7 @@ interface TypographyModalProps {
   menuData: WeeklyMenuData;
   onUpdateMenu: (updated: WeeklyMenuData | ((prev: WeeklyMenuData) => WeeklyMenuData)) => void;
   allergensList?: AllergenDef[];
-  initialTab?: 'all' | 'dishTitle' | 'dishLabel' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity';
+  initialTab?: 'all' | 'dishTitle' | 'dishLabel' | 'labelPosition' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity';
 }
 
 const COLOR_PRESETS = [

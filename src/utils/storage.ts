@@ -51,11 +51,13 @@ export function loadPhotoCategories(): PhotoCategoryDef[] {
       const stored = JSON.parse(raw);
       if (Array.isArray(stored) && stored.length > 0) {
         // Ensure 'salade' is present if not already
-        const hasSalade = stored.some((c: PhotoCategoryDef) => c.id === 'salade' || c.label.toLowerCase().includes('salade'));
+        const hasSalade = stored.some(
+          (c: any) => c && (c.id === 'salade' || (typeof c.label === 'string' && c.label.toLowerCase().includes('salade')))
+        );
         if (!hasSalade) {
           stored.splice(2, 0, { id: 'salade', label: 'Salades' });
         }
-        return stored;
+        return stored.filter((c: any) => c && c.id && c.label);
       }
     }
   } catch (err) {
@@ -66,6 +68,7 @@ export function loadPhotoCategories(): PhotoCategoryDef[] {
 
 export function savePhotoCategories(categories: PhotoCategoryDef[]): void {
   try {
+    if (!Array.isArray(categories)) return;
     localStorage.setItem(PHOTO_CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
   } catch (err) {
     console.warn('Could not save photo categories to localStorage', err);
@@ -111,6 +114,7 @@ export function saveMenuData(data: WeeklyMenuData): void {
 }
 
 export function deduplicatePhotoList(photos: PhotoLibraryItem[]): PhotoLibraryItem[] {
+  if (!photos || !Array.isArray(photos)) return [];
   const seenIds = new Set<string>();
   const seenUrls = new Set<string>();
   const seenCustomNames = new Set<string>();
@@ -120,7 +124,7 @@ export function deduplicatePhotoList(photos: PhotoLibraryItem[]): PhotoLibraryIt
     if (!photo || !photo.url) continue;
 
     // 1. Never duplicate exact same ID
-    if (seenIds.has(photo.id)) continue;
+    if (photo.id && seenIds.has(photo.id)) continue;
 
     // 2. Never duplicate exact same image URL
     if (seenUrls.has(photo.url)) continue;
@@ -136,7 +140,9 @@ export function deduplicatePhotoList(photos: PhotoLibraryItem[]): PhotoLibraryIt
       }
     }
 
-    seenIds.add(photo.id);
+    if (photo.id) {
+      seenIds.add(photo.id);
+    }
     seenUrls.add(photo.url);
     result.push(photo);
   }
