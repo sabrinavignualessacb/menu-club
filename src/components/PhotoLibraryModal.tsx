@@ -116,11 +116,11 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const replaceFileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
-
   const sanitizedPhotos = useMemo(() => {
     return deduplicatePhotoList(photos || []);
   }, [photos]);
+
+  if (!isOpen) return null;
 
   const filteredPhotos = (sanitizedPhotos || []).filter((p) => {
     if (!p) return false;

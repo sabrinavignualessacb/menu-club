@@ -891,8 +891,10 @@ export default function App() {
 
             {/* Photo Library Manager Button */}
             <button
+              id="header-photo-library-btn"
+              type="button"
               onClick={() => handleOpenPhotoModal(undefined, undefined)}
-              className="px-3 py-2 bg-white/60 hover:bg-white/90 text-slate-800 border border-white/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+              className="px-3 py-2 bg-white/60 hover:bg-white/90 text-slate-800 border border-white/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
               title="Ouvrir la bibliothèque de photos de plats"
             >
               <ImageIcon className="w-3.5 h-3.5 text-amber-600" />
@@ -1093,6 +1095,13 @@ export default function App() {
       {/* 5. MODALS */}
       {/* Photo Library Modal */}
       <ErrorBoundary
+        isModal
+        resetKey={isPhotoModalOpen}
+        onClose={() => {
+          setIsPhotoModalOpen(false);
+          setActiveDishIndex(undefined);
+          setActiveCoverPhotoIndex(undefined);
+        }}
         fallbackTitle="Erreur dans la galerie de photos"
         fallbackMessage="La galerie photo a rencontré une anomalie lors de son chargement. Vous pouvez la relancer ou la refermer."
         onReset={() => {
