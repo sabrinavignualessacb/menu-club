@@ -15,6 +15,7 @@ import {
   saveBackgrounds,
   saveMenuData,
   savePhotos,
+  deduplicatePhotoList,
   saveMenuToCloud,
   subscribeToCloudMenu,
   subscribeToCloudPhotos,
@@ -124,26 +125,12 @@ export default function App() {
     const unsubscribe = subscribeToCloudPhotos(
       (cloudPhotos) => {
         if (cloudPhotos && Array.isArray(cloudPhotos)) {
-          setPhotos((prevLocal) => {
-            const photoMap = new Map<string, PhotoLibraryItem>();
-            DEFAULT_PHOTOS.forEach((p) => photoMap.set(p.id, p));
-
-            // Merge local photos first
-            prevLocal.forEach((p) => {
-              if (p.isCustom || !photoMap.has(p.id)) {
-                photoMap.set(p.id, p);
-              }
-            });
-
-            // Cloud photos override and take precedence
-            cloudPhotos.forEach((p) => {
-              photoMap.set(p.id, p);
-            });
-
-            const merged = Array.from(photoMap.values());
-            merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            savePhotos(merged);
-            return merged;
+          setPhotos(() => {
+            const customCloud = cloudPhotos.map((p) => ({ ...p, isCustom: true }));
+            const combined = deduplicatePhotoList([...customCloud, ...DEFAULT_PHOTOS]);
+            combined.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            savePhotos(combined);
+            return combined;
           });
         }
       },
@@ -152,18 +139,6 @@ export default function App() {
       }
     );
     return () => unsubscribe();
-  }, []);
-
-  // 1c. Automatically push existing local custom photos to Cloud on startup so anyone with the link can see them!
-  useEffect(() => {
-    const localCustom = loadPhotos().filter((p) => p.isCustom);
-    if (localCustom.length > 0) {
-      localCustom.forEach((p) => {
-        savePhotoToCloud(p).catch((err) =>
-          console.warn('Initial push of local photo to cloud failed:', err)
-        );
-      });
-    }
   }, []);
 
   // 1d. Subscribe to Cloud Backgrounds from Firestore
@@ -337,30 +312,29 @@ export default function App() {
   const handleImportPhotos = async (importedPhotos: PhotoLibraryItem[]) => {
     if (!importedPhotos || importedPhotos.length === 0) return;
 
+    let mergedCustomCount = 0;
     setPhotos((prev) => {
-      const map = new Map<string, PhotoLibraryItem>();
-      DEFAULT_PHOTOS.forEach((p) => map.set(p.id, p));
-      prev.forEach((p) => map.set(p.id, p));
-      importedPhotos.forEach((p) => {
-        const isDef = DEFAULT_PHOTOS.some((d) => d.id === p.id);
-        map.set(p.id, { ...p, isCustom: !isDef });
+      const sanitized = importedPhotos.map((p) => {
+        const isDef = DEFAULT_PHOTOS.some((d) => d.id === p.id || d.url === p.url);
+        return { ...p, isCustom: !isDef };
       });
-      const merged = Array.from(map.values());
+      const merged = deduplicatePhotoList([...sanitized, ...prev, ...DEFAULT_PHOTOS]);
       merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       savePhotos(merged);
+      mergedCustomCount = merged.filter((p) => p.isCustom).length;
       return merged;
     });
 
     setCloudSyncStatus('saving');
-    showToast(`${importedPhotos.length} photo(s) en cours de synchronisation Cloud...`);
+    showToast(`Photos importées et dédoublées. Envoi vers le Cloud...`);
     try {
-      const customOnes = importedPhotos.filter((p) => !DEFAULT_PHOTOS.some((d) => d.id === p.id));
+      const customOnes = importedPhotos.filter((p) => !DEFAULT_PHOTOS.some((d) => d.id === p.id || d.url === p.url));
       for (const p of customOnes) {
         await savePhotoToCloud({ ...p, isCustom: true });
       }
       setCloudSyncStatus('synced');
       setLastCloudSyncTime(new Date());
-      showToast(`${importedPhotos.length} photo(s) synchronisée(s) dans le Cloud !`);
+      showToast(`Bibliothèque synchronisée (${mergedCustomCount} photos)`);
     } catch (err) {
       console.warn('Erreur sauvegarde Cloud import photos:', err);
       setCloudSyncStatus('offline');

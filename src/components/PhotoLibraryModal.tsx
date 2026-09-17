@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { PhotoCategory, PhotoCategoryDef, PhotoLibraryItem } from '../types';
 import {
   loadPhotoCategories,
@@ -6,6 +6,7 @@ import {
   DEFAULT_PHOTO_CATEGORIES,
   subscribeToCloudCategories,
   saveCategoriesToCloud,
+  deduplicatePhotoList,
 } from '../utils/storage';
 import { ImageCropModal } from './ImageCropModal';
 import { compressImage } from '../utils/cropImage';
@@ -117,15 +118,19 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
 
   if (!isOpen) return null;
 
-  const filteredPhotos = photos.filter((p) => {
+  const sanitizedPhotos = useMemo(() => {
+    return deduplicatePhotoList(photos);
+  }, [photos]);
+
+  const filteredPhotos = sanitizedPhotos.filter((p) => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     const matchesSearch = (p.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const getCategoryCount = (catId: 'all' | PhotoCategory) => {
-    if (catId === 'all') return photos.length;
-    return photos.filter((p) => p.category === catId).length;
+    if (catId === 'all') return sanitizedPhotos.length;
+    return sanitizedPhotos.filter((p) => p.category === catId).length;
   };
 
   // Add Category Handler
@@ -435,13 +440,15 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
           isCustom: it.isCustom !== undefined ? it.isCustom : true,
         }));
 
+      const dedupedItems = deduplicatePhotoList(validItems);
+
       if (onImportPhotos) {
-        onImportPhotos(validItems);
+        onImportPhotos(dedupedItems);
       } else {
-        validItems.forEach((p) => onAddPhoto(p));
+        dedupedItems.forEach((p) => onAddPhoto(p));
       }
 
-      setImportStatusMessage(`Succès ! ${validItems.length} photos importées et synchronisées dans le Cloud.`);
+      setImportStatusMessage(`Succès ! ${dedupedItems.length} photos importées et dédoublées dans le Cloud.`);
       setPasteJsonText('');
       setTimeout(() => {
         setShowTransferModal(false);
@@ -830,7 +837,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                       : 'bg-slate-100 text-slate-600'
                   }`}
                 >
-                  {photos.length}
+                  {sanitizedPhotos.length}
                 </span>
               </button>
 
@@ -1570,7 +1577,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                     className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
                   >
                     <Download className="w-4 h-4 text-amber-400" />
-                    Télécharger la sauvegarde ({photos.length} photos en .json)
+                    Télécharger la sauvegarde ({sanitizedPhotos.length} photos en .json)
                   </button>
                 </div>
               )}
@@ -1611,7 +1618,7 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
 
             {/* Modal Footer */}
             <div className="px-6 py-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-              <span>{photos.length} photo(s) actuellement dans la galerie</span>
+              <span>{sanitizedPhotos.length} photo(s) actuellement dans la galerie</span>
               <button
                 type="button"
                 onClick={() => setShowTransferModal(false)}

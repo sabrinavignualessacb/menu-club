@@ -110,25 +110,59 @@ export function saveMenuData(data: WeeklyMenuData): void {
   }
 }
 
+export function deduplicatePhotoList(photos: PhotoLibraryItem[]): PhotoLibraryItem[] {
+  const seenIds = new Set<string>();
+  const seenUrls = new Set<string>();
+  const seenCustomNames = new Set<string>();
+  const result: PhotoLibraryItem[] = [];
+
+  for (const photo of photos) {
+    if (!photo || !photo.url) continue;
+
+    // 1. Never duplicate exact same ID
+    if (seenIds.has(photo.id)) continue;
+
+    // 2. Never duplicate exact same image URL
+    if (seenUrls.has(photo.url)) continue;
+
+    // 3. For custom photos, never duplicate exact same dish name (trimmed, lowercased)
+    if (photo.isCustom && photo.name) {
+      const normName = photo.name.trim().toLowerCase();
+      if (normName && seenCustomNames.has(normName)) {
+        continue;
+      }
+      if (normName) {
+        seenCustomNames.add(normName);
+      }
+    }
+
+    seenIds.add(photo.id);
+    seenUrls.add(photo.url);
+    result.push(photo);
+  }
+
+  return result;
+}
+
 export function loadPhotos(): PhotoLibraryItem[] {
   try {
     const raw = localStorage.getItem(PHOTOS_STORAGE_KEY);
     if (raw) {
       const storedPhotos = JSON.parse(raw);
       if (Array.isArray(storedPhotos) && storedPhotos.length > 0) {
-        // Merge missing default photos like the new salads
         const existingIds = new Set(storedPhotos.map((p: PhotoLibraryItem) => p.id));
-        const missingDefaults = DEFAULT_PHOTOS.filter((dp) => !existingIds.has(dp.id));
+        const existingUrls = new Set(storedPhotos.map((p: PhotoLibraryItem) => p.url));
+        const missingDefaults = DEFAULT_PHOTOS.filter(
+          (dp) => !existingIds.has(dp.id) && !existingUrls.has(dp.url)
+        );
         const updated = storedPhotos.map((p: PhotoLibraryItem) => {
           if (p.id === 'photo-salade-fraicheur' && (p.category === 'vegetarien' || !p.category)) {
             return { ...p, category: 'salade' as const };
           }
           return p;
         });
-        if (missingDefaults.length > 0) {
-          return [...updated, ...missingDefaults];
-        }
-        return updated;
+        const merged = missingDefaults.length > 0 ? [...updated, ...missingDefaults] : updated;
+        return deduplicatePhotoList(merged);
       }
     }
   } catch (err) {
@@ -139,8 +173,9 @@ export function loadPhotos(): PhotoLibraryItem[] {
 
 export function savePhotos(photos: PhotoLibraryItem[]): void {
   try {
+    const deduped = deduplicatePhotoList(photos);
     // Strip redundant or bloated originalUrls from storage to protect localStorage quota
-    const lightweightPhotos = photos.map((p) => {
+    const lightweightPhotos = deduped.map((p) => {
       if (p.originalUrl && (p.originalUrl === p.url || p.originalUrl.length > 150000)) {
         const { originalUrl, ...rest } = p;
         return rest;
@@ -151,7 +186,7 @@ export function savePhotos(photos: PhotoLibraryItem[]): void {
   } catch (err) {
     console.warn('Could not save photos to localStorage, applying quota safeguard', err);
     try {
-      const minimalPhotos = photos.map(({ originalUrl, ...rest }) => rest);
+      const minimalPhotos = deduplicatePhotoList(photos).map(({ originalUrl, ...rest }) => rest);
       localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(minimalPhotos));
     } catch (e2) {
       console.error('Fallback saving photos failed', e2);
