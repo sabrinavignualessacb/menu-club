@@ -1,6 +1,7 @@
 import {
   doc,
   setDoc,
+  getDoc,
   onSnapshot,
   collection,
   deleteDoc,
@@ -11,6 +12,7 @@ import { BackgroundItem, PhotoCategoryDef, PhotoLibraryItem, WeeklyMenuData } fr
 
 const MENU_DOC_ID = 'current_weekly_menu';
 const MENU_COLLECTION = 'menus';
+const MENU_DAYS_COLLECTION = 'menu_days';
 const PHOTOS_COLLECTION = 'custom_photos';
 const BACKGROUNDS_COLLECTION = 'custom_backgrounds';
 const CATEGORIES_DOC_ID = 'photo_categories';
@@ -30,30 +32,98 @@ function cleanPhotoForCloud(photo: PhotoLibraryItem): Record<string, any> {
 }
 
 /**
- * Subscribes to real-time changes of the shared weekly menu in Firestore.
+ * Subscribes to real-time changes of the weekly menu in Firestore.
+ * Listens to the `menu_days` multi-document collection (where each day has its own document,
+ * completely immune to the 1MB document limit). Falls back to the single-doc `menus` collection if needed.
  */
 export function subscribeToCloudMenu(
   onData: (menu: WeeklyMenuData, clientTimestamp?: number) => void,
   onError?: (err: Error) => void
 ): () => void {
   try {
-    const menuDocRef = doc(db, MENU_COLLECTION, MENU_DOC_ID);
+    const menuDaysColRef = collection(db, MENU_DAYS_COLLECTION);
     return onSnapshot(
-      menuDocRef,
+      menuDaysColRef,
       (snapshot) => {
         // Skip local uncommitted writes to prevent race condition loops
         if (snapshot.metadata.hasPendingWrites) {
           return;
         }
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data && data.menu) {
-            onData(data.menu as WeeklyMenuData, data.clientTimestamp || 0);
+        if (!snapshot.empty) {
+          const days: Record<string, any> = {};
+          let meta: any = {};
+          let maxTs = 0;
+          let countDays = 0;
+
+          snapshot.docs.forEach((docSnap) => {
+            const data = docSnap.data();
+            const ts =
+              typeof data.clientTimestamp === 'number' && data.clientTimestamp > 0
+                ? data.clientTimestamp
+                : data.updatedAt?.toMillis
+                ? data.updatedAt.toMillis()
+                : 0;
+            if (ts > maxTs) maxTs = ts;
+
+            if (['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(docSnap.id)) {
+              if (data.day) {
+                days[docSnap.id] = data.day;
+                countDays++;
+              }
+            } else if (docSnap.id === 'metadata') {
+              meta = data;
+            }
+          });
+
+          // If we have day documents, construct full WeeklyMenuData
+          if (countDays > 0) {
+            const assembledMenu: WeeklyMenuData = {
+              id: meta.id || 'weekly-menu-current',
+              weekLabel: meta.weekLabel || 'Menu du Chef',
+              templateId: meta.templateId || 'classic-navy',
+              backgroundOpacity: meta.backgroundOpacity ?? 70,
+              typography: meta.typography,
+              cover: meta.cover || {
+                id: 'cover',
+                brandName: "LE CHEF'S CLUB",
+                title: 'Menu de la Semaine',
+                subtitlePrefix: 'Du',
+                startDate: 'Lundi',
+                subtitleMiddle: 'au',
+                endDate: 'Vendredi',
+                year: '2026',
+                tagline: 'Cuisine Maison & Produits Frais',
+                backgroundId: 'bg-slate-dark',
+                featuredPhotos: [],
+              },
+              days: days as any,
+            };
+            onData(assembledMenu, maxTs);
+            return;
           }
         }
+
+        // Fallback to legacy single document if menu_days collection is not yet populated
+        const menuDocRef = doc(db, MENU_COLLECTION, MENU_DOC_ID);
+        getDoc(menuDocRef)
+          .then((singleSnap) => {
+            if (singleSnap.exists()) {
+              const d = singleSnap.data();
+              if (d && d.menu) {
+                const ts =
+                  typeof d.clientTimestamp === 'number' && d.clientTimestamp > 0
+                    ? d.clientTimestamp
+                    : d.updatedAt?.toMillis
+                    ? d.updatedAt.toMillis()
+                    : 0;
+                onData(d.menu as WeeklyMenuData, ts);
+              }
+            }
+          })
+          .catch((e) => console.warn('Fallback single doc fetch failed', e));
       },
       (error) => {
-        console.warn('Firestore menu subscription error:', error);
+        console.warn('Firestore menu_days subscription error:', error);
         if (onError) onError(error);
       }
     );
@@ -65,15 +135,52 @@ export function subscribeToCloudMenu(
 
 /**
  * Persists the weekly menu to Firestore so it is accessible across all devices.
+ * Dual-writes to both the main document and individual day documents for unbreakable persistence.
  */
 export async function saveMenuToCloud(menu: WeeklyMenuData): Promise<void> {
+  const now = Date.now();
   try {
+    // 1. Dual-write individual day sub-documents (each day doc is only ~40-70KB, 15x below Firestore limit)
+    if (menu.days) {
+      const dayWrites = Object.entries(menu.days).map(([dayKey, dayData]) => {
+        const dayRef = doc(db, MENU_DAYS_COLLECTION, dayKey);
+        return setDoc(
+          dayRef,
+          {
+            day: dayData,
+            clientTimestamp: now,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      });
+      const metaRef = doc(db, MENU_DAYS_COLLECTION, 'metadata');
+      dayWrites.push(
+        setDoc(
+          metaRef,
+          {
+            cover: menu.cover,
+            weekLabel: menu.weekLabel,
+            templateId: menu.templateId,
+            backgroundOpacity: menu.backgroundOpacity,
+            typography: menu.typography,
+            clientTimestamp: now,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        )
+      );
+      // Run day backups in parallel
+      await Promise.allSettled(dayWrites);
+    }
+
+    // 2. Primary document write
     const menuDocRef = doc(db, MENU_COLLECTION, MENU_DOC_ID);
     await setDoc(
       menuDocRef,
       {
         menu,
-        clientTimestamp: Date.now(),
+        clientTimestamp: now,
         updatedAt: serverTimestamp(),
       },
       { merge: true }

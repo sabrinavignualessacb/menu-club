@@ -42,6 +42,7 @@ import {
   exportAllVisualsAsPdf,
   ExportProgress,
 } from './utils/exportImage';
+import { compressDishImage, optimizeWeeklyMenuImages } from './utils/cropImage';
 import {
   UtensilsCrossed,
   Sparkles,
@@ -121,14 +122,16 @@ export default function App() {
     const unsubscribe = subscribeToCloudMenu(
       (cloudMenu, cloudTimestamp) => {
         if (cloudMenu && cloudMenu.days && cloudMenu.cover) {
-          // If the user has made local edits in the last 4 seconds, ignore remote snapshot to prevent overwriting active work
+          const remoteTime = typeof cloudTimestamp === 'number' && cloudTimestamp > 0 ? cloudTimestamp : 0;
           const timeSinceLocalEdit = Date.now() - lastUserEditTime.current;
-          if (timeSinceLocalEdit < 4000) {
+
+          // If the user has made local edits in the last 4 seconds, ignore remote snapshot to prevent overwriting active work
+          if (lastUserEditTime.current > 0 && timeSinceLocalEdit < 4000) {
             return;
           }
 
-          // If the incoming cloud data is older than our latest local edit, ignore it
-          if (cloudTimestamp && cloudTimestamp < lastUserEditTime.current) {
+          // If the incoming cloud data is older than or equal to our latest local edit, ignore it
+          if (lastUserEditTime.current > 0 && remoteTime <= lastUserEditTime.current) {
             return;
           }
 
@@ -176,6 +179,63 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // 1c. Automatically restore custom dish photos for Wednesday & Thursday if Firestore previously failed due to doc size
+  useEffect(() => {
+    if (!photos || photos.length === 0) return;
+
+    setMenuData((prev) => {
+      let changed = false;
+      const newDays = { ...prev.days };
+
+      // Wednesday plat 1: "Sauté de poulet asiatique Nouille chinoise"
+      const wedDay = newDays.wednesday;
+      if (wedDay && wedDay.dishes && wedDay.dishes[0]) {
+        const d0 = wedDay.dishes[0];
+        const isDefault = !d0.imageUrl || d0.imageUrl.includes('photo-1568901346375-23c9450c58cd');
+        if (isDefault) {
+          const match = photos.find(
+            (p) =>
+              p.id === 'custom-photo-1789631942499' ||
+              p.name.toLowerCase().includes('sautédepoulet') ||
+              p.name.toLowerCase().includes('pouletnouille')
+          );
+          if (match && match.url) {
+            const updatedDishes = [...wedDay.dishes];
+            updatedDishes[0] = { ...d0, imageUrl: match.url };
+            newDays.wednesday = { ...wedDay, dishes: updatedDishes };
+            changed = true;
+          }
+        }
+      }
+
+      // Thursday plat 1: "Saucisse de Toulouse Lentilles"
+      const thuDay = newDays.thursday;
+      if (thuDay && thuDay.dishes && thuDay.dishes[0]) {
+        const d0 = thuDay.dishes[0];
+        const isDefault = !d0.imageUrl || d0.imageUrl.includes('photo-1504674900247-0877df9cc836');
+        if (isDefault) {
+          const match = photos.find(
+            (p) =>
+              p.id === 'custom-photo-1789632162431' ||
+              p.name.toLowerCase().includes('saucisseslentille') ||
+              p.name.toLowerCase().includes('saucisse')
+          );
+          if (match && match.url) {
+            const updatedDishes = [...thuDay.dishes];
+            updatedDishes[0] = { ...d0, imageUrl: match.url };
+            newDays.thursday = { ...thuDay, dishes: updatedDishes };
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        return { ...prev, days: newDays };
+      }
+      return prev;
+    });
+  }, [photos]);
+
   // 1d. Subscribe to Cloud Backgrounds from Firestore
   useEffect(() => {
     const unsubscribe = subscribeToCloudBackgrounds((cloudBackgrounds) => {
@@ -196,7 +256,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Auto-save to localStorage immediately and debounce save to Cloud Firestore
+  // 2. Auto-save to localStorage immediately and debounce save to Cloud Firestore with image payload optimization
   useEffect(() => {
     saveMenuData(menuData);
 
@@ -219,15 +279,27 @@ export default function App() {
 
     const timer = setTimeout(async () => {
       try {
-        lastSavedMenuJson.current = currentJson;
-        await saveMenuToCloud(menuData);
+        // Compress any oversized dish images so the menu payload is always 150-300KB (way below Firestore 1MB limit)
+        const slimMenu = await optimizeWeeklyMenuImages(menuDataRef.current);
+        const finalJson = JSON.stringify(slimMenu);
+
+        await saveMenuToCloud(slimMenu);
+        lastSavedMenuJson.current = finalJson;
+
+        // If compression optimized legacy photos, update state silently without re-triggering sync
+        if (finalJson !== currentJson) {
+          isIncomingCloudUpdate.current = true;
+          setMenuData(slimMenu);
+          saveMenuData(slimMenu);
+        }
+
         setCloudSyncStatus('synced');
         setLastCloudSyncTime(new Date());
       } catch (err) {
         console.warn('Failed to sync menu to Firestore:', err);
         setCloudSyncStatus('offline');
       }
-    }, 800);
+    }, 600);
 
     return () => clearTimeout(timer);
   }, [menuData]);
@@ -236,7 +308,9 @@ export default function App() {
   const handleForceCloudSync = async () => {
     setCloudSyncStatus('saving');
     try {
-      await saveMenuToCloud(menuData);
+      const slimMenu = await optimizeWeeklyMenuImages(menuDataRef.current);
+      await saveMenuToCloud(slimMenu);
+      lastSavedMenuJson.current = JSON.stringify(slimMenu);
       const customPhotos = photos.filter((p) => p.isCustom);
       await Promise.all(customPhotos.map((p) => savePhotoToCloud(p)));
       setCloudSyncStatus('synced');
@@ -272,16 +346,25 @@ export default function App() {
     setIsPhotoModalOpen(true);
   };
 
-  const handleSelectPhoto = (photoUrl: string, targetDay?: DayId | 'cover', targetDishIdx?: number) => {
+  const handleSelectPhoto = async (photoUrl: string, targetDay?: DayId | 'cover', targetDishIdx?: number) => {
     lastUserEditTime.current = Date.now();
     // Determine destination
     const isTargetCover = targetDay === 'cover' || (targetDay === undefined && activeCoverPhotoIndex !== undefined);
+
+    let cleanUrl = photoUrl;
+    if (photoUrl && photoUrl.startsWith('data:image/')) {
+      try {
+        cleanUrl = await compressDishImage(photoUrl, isTargetCover ? 400 : 360, 0.76);
+      } catch (err) {
+        console.warn('Image compression fallback', err);
+      }
+    }
 
     if (isTargetCover) {
       const targetCoverIdx = targetDishIdx !== undefined ? targetDishIdx : (activeCoverPhotoIndex ?? 0);
       setMenuData((prev) => {
         const newFeatured = [...(prev.cover.featuredPhotos || [])];
-        newFeatured[targetCoverIdx] = photoUrl;
+        newFeatured[targetCoverIdx] = cleanUrl;
         return {
           ...prev,
           cover: {
@@ -317,7 +400,7 @@ export default function App() {
 
         newDishes[targetIdx] = {
           ...newDishes[targetIdx],
-          imageUrl: photoUrl,
+          imageUrl: cleanUrl,
         };
 
         return {
@@ -360,11 +443,20 @@ export default function App() {
   };
 
   const handleAddCustomPhoto = async (newPhoto: PhotoLibraryItem) => {
-    setPhotos((prev) => [newPhoto, ...prev]);
+    let cleanPhoto = newPhoto;
+    if (newPhoto.url && newPhoto.url.startsWith('data:image/')) {
+      try {
+        const compressed = await compressDishImage(newPhoto.url, 400, 0.76);
+        cleanPhoto = { ...newPhoto, url: compressed };
+      } catch (err) {
+        console.warn('Custom photo compression fallback', err);
+      }
+    }
+    setPhotos((prev) => [cleanPhoto, ...prev]);
     showToast('Photo ajoutée et synchronisée au Cloud');
     setCloudSyncStatus('saving');
     try {
-      await savePhotoToCloud(newPhoto);
+      await savePhotoToCloud(cleanPhoto);
       setCloudSyncStatus('synced');
       setLastCloudSyncTime(new Date());
     } catch (err) {
