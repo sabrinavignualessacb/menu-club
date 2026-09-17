@@ -435,10 +435,11 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                             />
                           </div>
 
-                          {/* Row 4: Dedicated Badges Row (Single-line French Meat Badges VBF, VF, LPF) */}
+                          {/* Row 4: Dedicated Badges Row (Single-line French Meat Badges VBF, VPF, VF...) */}
                           <div className="h-[24px] flex items-center justify-center w-full text-center mb-1.5 overflow-hidden shrink-0">
                             <BadgesList
                               badges={dish.badges}
+                              dishName={dish.name}
                               showFrenchMeat={dish.showFrenchMeat}
                               size={dishCount === 3 ? 'sm' : 'md'}
                             />

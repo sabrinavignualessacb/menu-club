@@ -19,7 +19,7 @@ export const BadgeRenderer: React.FC<BadgeRendererProps> = ({
   // Normalize legacy IDs
   let normalizedId = badgeId;
   if (badgeId === 'viande-francaise') normalizedId = 'vf';
-  if (badgeId === 'lpf') normalizedId = 'pf';
+  if (badgeId === 'lpf' || badgeId === 'pf') normalizedId = 'vpf';
 
   const allBadges = [...DEFAULT_BADGES, ...customBadgesList];
   const badge = allBadges.find((b) => b.id.toLowerCase() === normalizedId.toLowerCase()) || {
@@ -105,10 +105,10 @@ export const BadgeRenderer: React.FC<BadgeRendererProps> = ({
     );
   }
 
-  // French meat badge (flag-fr) by default for VBF, PF, VOF, VAF, VVF, VF, etc.
+  // French meat badge (flag-fr) by default for VBF, VPF, PF, VOF, VAF, VVF, VF, etc.
   const isFrenchMeat =
     badge.type === 'flag-fr' ||
-    ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf', 'lpf'].includes(normalizedId.toLowerCase());
+    ['vbf', 'vpf', 'pf', 'vof', 'vaf', 'vvf', 'vf', 'lpf'].includes(normalizedId.toLowerCase());
 
   if (isFrenchMeat) {
     return (
@@ -148,6 +148,7 @@ export const BadgeRenderer: React.FC<BadgeRendererProps> = ({
 
 interface BadgesListProps {
   badges?: string[];
+  dishName?: string;
   showFrenchMeat?: boolean;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -156,6 +157,7 @@ interface BadgesListProps {
 
 export const BadgesList: React.FC<BadgesListProps> = ({
   badges = [],
+  dishName = '',
   showFrenchMeat = false,
   size = 'md',
   className = '',
@@ -166,10 +168,33 @@ export const BadgesList: React.FC<BadgesListProps> = ({
 
   if (Array.isArray(badges)) {
     // When badges array is defined (even if empty []), use it as the source of truth
-    effectiveBadges = badges.map((id) => (id === 'viande-francaise' ? 'vf' : id));
+    effectiveBadges = badges.map((id) => {
+      if (id === 'viande-francaise') return 'vf';
+      if (id === 'lpf' || id === 'pf') return 'vpf';
+      return id;
+    });
   } else if (showFrenchMeat) {
-    // Only use legacy fallback if badges is undefined
-    effectiveBadges = ['vbf'];
+    // Deduce initial meat badge from dish name if badges array is not yet saved
+    const lower = (dishName || '').toLowerCase();
+    if (lower.includes('poulet') || lower.includes('volaille') || lower.includes('dinde') || lower.includes('canard')) {
+      effectiveBadges = ['vf'];
+    } else if (
+      lower.includes('porc') ||
+      lower.includes('cochon') ||
+      lower.includes('jambon') ||
+      lower.includes('saucisse') ||
+      lower.includes('lardon') ||
+      lower.includes('bacon') ||
+      lower.includes('chorizo')
+    ) {
+      effectiveBadges = ['vpf'];
+    } else if (lower.includes('veau')) {
+      effectiveBadges = ['vvf'];
+    } else if (lower.includes('agneau') || lower.includes('mouton')) {
+      effectiveBadges = ['vaf'];
+    } else {
+      effectiveBadges = ['vbf'];
+    }
   }
 
   // Deduplicate while preserving user selection order

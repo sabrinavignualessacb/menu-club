@@ -315,19 +315,27 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const [newCustomBadgeText, setNewCustomBadgeText] = useState<{ [dishIdx: number]: string }>({});
 
   // Helper to determine meat badge when migrating legacy showFrenchMeat flag
-  const FRENCH_MEAT_IDS = ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf', 'viande-francaise'];
+  const FRENCH_MEAT_IDS = ['vbf', 'vpf', 'pf', 'vof', 'vaf', 'vvf', 'vf', 'viande-francaise', 'lpf'];
   const getDishInitialMeatBadge = (dishName: string = ''): string => {
     const lower = dishName.toLowerCase();
     if (lower.includes('poulet') || lower.includes('volaille') || lower.includes('dinde') || lower.includes('canard')) {
       return 'vf';
     }
-    if (lower.includes('porc') || lower.includes('cochon') || lower.includes('jambon')) {
-      return 'pf';
+    if (
+      lower.includes('porc') ||
+      lower.includes('cochon') ||
+      lower.includes('jambon') ||
+      lower.includes('saucisse') ||
+      lower.includes('lardon') ||
+      lower.includes('bacon') ||
+      lower.includes('chorizo')
+    ) {
+      return 'vpf';
     }
     if (lower.includes('veau')) {
       return 'vvf';
     }
-    if (lower.includes('agneau')) {
+    if (lower.includes('agneau') || lower.includes('mouton')) {
       return 'vaf';
     }
     return 'vbf';
@@ -340,7 +348,11 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
 
     let currentBadges: string[] = [];
     if (Array.isArray(dish.badges)) {
-      currentBadges = dish.badges.map((b) => (b === 'viande-francaise' ? 'vf' : b));
+      currentBadges = dish.badges.map((b) => {
+        if (b === 'viande-francaise') return 'vf';
+        if (b === 'lpf' || b === 'pf') return 'vpf';
+        return b;
+      });
     } else if (dish.showFrenchMeat) {
       currentBadges = [getDishInitialMeatBadge(dish.name)];
     }
@@ -1629,9 +1641,13 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                             </div>
 
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {DEFAULT_BADGES.filter((b) => ['vbf', 'pf', 'vof', 'vaf', 'vvf', 'vf'].includes(b.id)).map((badge) => {
+                              {DEFAULT_BADGES.filter((b) => ['vbf', 'vpf', 'vf', 'vvf', 'vaf', 'vof'].includes(b.id)).map((badge) => {
                                 const activeDishBadges = Array.isArray(dish.badges)
-                                  ? dish.badges.map((b) => (b === 'viande-francaise' ? 'vf' : b))
+                                  ? dish.badges.map((b) => {
+                                      if (b === 'viande-francaise') return 'vf';
+                                      if (b === 'lpf' || b === 'pf') return 'vpf';
+                                      return b;
+                                    })
                                   : (dish.showFrenchMeat ? [getDishInitialMeatBadge(dish.name)] : []);
                                 const isSelected = activeDishBadges.includes(badge.id);
                                 return (
