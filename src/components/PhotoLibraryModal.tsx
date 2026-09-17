@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { PhotoCategory, PhotoCategoryDef, PhotoLibraryItem } from '../types';
+import { DayId, PhotoCategory, PhotoCategoryDef, PhotoLibraryItem } from '../types';
+import { DEFAULT_PHOTOS } from '../data/defaultData';
 import {
   loadPhotoCategories,
   savePhotoCategories,
@@ -33,19 +34,24 @@ import {
   FileJson,
   ExternalLink,
   CheckCircle2,
+  Target,
 } from 'lucide-react';
 
 interface PhotoLibraryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectPhoto: (photoUrl: string) => void;
+  onSelectPhoto: (photoUrl: string, targetDay?: DayId | 'cover', targetDishIdx?: number) => void;
   photos: PhotoLibraryItem[];
   onAddPhoto: (newPhoto: PhotoLibraryItem) => void;
   onDeletePhoto: (id: string) => void;
   onUpdatePhoto?: (updatedPhoto: PhotoLibraryItem) => void;
   onResetDefaultPhotos?: () => void;
+  onPurgeDefaultPhotos?: () => void;
   onImportPhotos?: (importedPhotos: PhotoLibraryItem[]) => void;
   currentSelectedUrl?: string;
+  initialDay?: DayId | 'cover';
+  initialDishIndex?: number;
+  initialCoverIndex?: number;
 }
 
 export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
@@ -57,13 +63,51 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
   onDeletePhoto,
   onUpdatePhoto,
   onResetDefaultPhotos,
+  onPurgeDefaultPhotos,
   onImportPhotos,
   currentSelectedUrl,
+  initialDay,
+  initialDishIndex,
+  initialCoverIndex,
 }) => {
   const [categories, setCategories] = useState<PhotoCategoryDef[]>(() => loadPhotoCategories());
   const [selectedCategory, setSelectedCategory] = useState<'all' | PhotoCategory>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+
+  // Target dish / cover destination state
+  const [targetMode, setTargetMode] = useState<'dish' | 'cover'>('dish');
+  const [targetDay, setTargetDay] = useState<DayId>('monday');
+  const [targetDishIdx, setTargetDishIdx] = useState<number>(0);
+  const [targetCoverIdx, setTargetCoverIdx] = useState<number>(0);
+
+  // Synchronize target destination when modal opens or initial props change
+  useEffect(() => {
+    if (isOpen) {
+      if (initialCoverIndex !== undefined || initialDay === 'cover') {
+        setTargetMode('cover');
+        setTargetCoverIdx(initialCoverIndex ?? 0);
+      } else {
+        setTargetMode('dish');
+        setTargetDay(initialDay || 'monday');
+        setTargetDishIdx(initialDishIndex ?? 0);
+      }
+    }
+  }, [isOpen, initialDay, initialDishIndex, initialCoverIndex]);
+
+  const hasDefaultPhotos = useMemo(() => {
+    return photos.some((p) => DEFAULT_PHOTOS.some((dp) => dp.id === p.id || dp.url === p.url));
+  }, [photos]);
+
+  const handleSelectAndClose = (photoUrl: string) => {
+    if (targetMode === 'cover') {
+      onSelectPhoto(photoUrl, 'cover', targetCoverIdx);
+    } else {
+      onSelectPhoto(photoUrl, targetDay, targetDishIdx);
+    }
+    setPreviewPhoto(null);
+    onClose();
+  };
 
   // Transfer & Sync Modal state (between Vercel and Cloud)
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -512,15 +556,15 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
               <span>Transférer / Synchro</span>
             </button>
 
-            {onResetDefaultPhotos && (
+            {hasDefaultPhotos && onPurgeDefaultPhotos && (
               <button
                 type="button"
-                onClick={onResetDefaultPhotos}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-white border border-slate-200/80 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Restaurer le catalogue d'exemples originaux du Chef"
+                onClick={onPurgeDefaultPhotos}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Supprimer définitivement toutes les photos d'exemple pour ne garder que mes photos personnelles"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Restaurer catalogue</span>
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">Purger photos d'exemple</span>
               </button>
             )}
 
@@ -530,6 +574,90 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+
+        {/* Destination Target Bar */}
+        <div className="bg-gradient-to-r from-blue-50 via-indigo-50/60 to-blue-50 border-b border-blue-200/80 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="font-bold text-blue-950 flex items-center gap-1.5">
+              <Target className="w-4 h-4 text-blue-600" />
+              <span>Plat de destination :</span>
+            </span>
+
+            {/* Mode switch: Plat du Jour vs Vitrine */}
+            <div className="flex items-center bg-white rounded-lg p-0.5 border border-blue-200 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setTargetMode('dish')}
+                className={`px-2.5 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer ${
+                  targetMode === 'dish'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Plat du Jour
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetMode('cover')}
+                className={`px-2.5 py-1 rounded-md font-semibold text-xs transition-colors cursor-pointer ${
+                  targetMode === 'cover'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Vitrine
+              </button>
+            </div>
+
+            {targetMode === 'dish' ? (
+              <div className="flex items-center gap-1.5">
+                {/* Select Day */}
+                <select
+                  value={targetDay}
+                  onChange={(e) => setTargetDay(e.target.value as DayId)}
+                  className="bg-white border border-blue-300 font-bold text-slate-800 rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-400 focus:outline-hidden cursor-pointer shadow-2xs"
+                >
+                  <option value="monday">Lundi</option>
+                  <option value="tuesday">Mardi</option>
+                  <option value="wednesday">Mercredi</option>
+                  <option value="thursday">Jeudi</option>
+                  <option value="friday">Vendredi</option>
+                </select>
+
+                {/* Select Dish */}
+                <select
+                  value={targetDishIdx}
+                  onChange={(e) => setTargetDishIdx(Number(e.target.value))}
+                  className="bg-white border border-blue-300 font-bold text-slate-800 rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-400 focus:outline-hidden cursor-pointer shadow-2xs"
+                >
+                  <option value={0}>Plat 1</option>
+                  <option value={1}>Plat 2</option>
+                  <option value={2}>Plat 3</option>
+                </select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <select
+                  value={targetCoverIdx}
+                  onChange={(e) => setTargetCoverIdx(Number(e.target.value))}
+                  className="bg-white border border-blue-300 font-bold text-slate-800 rounded-lg px-2.5 py-1 text-xs focus:ring-2 focus:ring-blue-400 focus:outline-hidden cursor-pointer shadow-2xs"
+                >
+                  <option value={0}>Photo vitrine 1</option>
+                  <option value={1}>Photo vitrine 2</option>
+                  <option value={2}>Photo vitrine 3</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="text-slate-600 text-[11px] font-medium hidden sm:flex items-center gap-1">
+            <span>Cliquez sur</span>
+            <span className="font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">
+              « Choisir pour {targetMode === 'dish' ? `Plat ${targetDishIdx + 1}` : `Vitrine ${targetCoverIdx + 1}`} »
+            </span>
+            <span>sur n'importe quelle photo pour l'assigner directement.</span>
           </div>
         </div>
 
@@ -989,6 +1117,42 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                     </div>
                   </div>
 
+                  {/* Direct Select Button for targeted dish */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectAndClose(photo.url);
+                    }}
+                    className={`mt-2 w-full py-1.5 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs ${
+                      isSelected
+                        ? 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-300'
+                        : 'bg-blue-50 hover:bg-blue-600 text-blue-800 hover:text-white border border-blue-200 hover:border-blue-600'
+                    }`}
+                    title={`Assigner directement cette photo à ${
+                      targetMode === 'cover'
+                        ? `la vitrine (${targetCoverIdx + 1})`
+                        : `${
+                            targetDay === 'monday'
+                              ? 'Lundi'
+                              : targetDay === 'tuesday'
+                              ? 'Mardi'
+                              : targetDay === 'wednesday'
+                              ? 'Mercredi'
+                              : targetDay === 'thursday'
+                              ? 'Jeudi'
+                              : 'Vendredi'
+                          } - Plat ${targetDishIdx + 1}`
+                    }`}
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>
+                      {targetMode === 'cover'
+                        ? `Choisir (Vitrine ${targetCoverIdx + 1})`
+                        : `Choisir pour Plat ${targetDishIdx + 1}`}
+                    </span>
+                  </button>
+
                   {/* Quick Action Buttons on Hover */}
                   <div className="absolute top-2 left-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
                     <button
@@ -1115,14 +1279,26 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  onSelectPhoto(previewPhoto.url);
-                  setPreviewPhoto(null);
-                  onClose();
+                  handleSelectAndClose(previewPhoto.url);
                 }}
                 className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer text-sm"
               >
                 <Check className="w-4 h-4 stroke-[3]" />
-                <span>Choisir cette photo pour le plat</span>
+                <span>
+                  {targetMode === 'cover'
+                    ? `Appliquer à la Vitrine (Photo ${targetCoverIdx + 1})`
+                    : `Appliquer au Plat ${targetDishIdx + 1} (${
+                        targetDay === 'monday'
+                          ? 'Lundi'
+                          : targetDay === 'tuesday'
+                          ? 'Mardi'
+                          : targetDay === 'wednesday'
+                          ? 'Mercredi'
+                          : targetDay === 'thursday'
+                          ? 'Jeudi'
+                          : 'Vendredi'
+                      })`}
+                </span>
               </button>
 
               <div className="grid grid-cols-3 gap-2">

@@ -155,26 +155,22 @@ export function loadPhotos(): PhotoLibraryItem[] {
     const raw = localStorage.getItem(PHOTOS_STORAGE_KEY);
     if (raw) {
       const storedPhotos = JSON.parse(raw);
-      if (Array.isArray(storedPhotos) && storedPhotos.length > 0) {
-        const existingIds = new Set(storedPhotos.map((p: PhotoLibraryItem) => p.id));
-        const existingUrls = new Set(storedPhotos.map((p: PhotoLibraryItem) => p.url));
-        const missingDefaults = DEFAULT_PHOTOS.filter(
-          (dp) => !existingIds.has(dp.id) && !existingUrls.has(dp.url)
-        );
-        const updated = storedPhotos.map((p: PhotoLibraryItem) => {
-          if (p.id === 'photo-salade-fraicheur' && (p.category === 'vegetarien' || !p.category)) {
-            return { ...p, category: 'salade' as const };
-          }
-          return p;
+      if (Array.isArray(storedPhotos)) {
+        // Filter out any default sample photos to respect user intent:
+        // "j'ai vidé toutes les photos mises par défaut, et elles reviennent quand je les supprime, je ne veux conserver que celle que j'insère dans la bibliotheque"
+        const userPhotos = storedPhotos.filter((p: PhotoLibraryItem) => {
+          if (!p || !p.id || !p.url) return false;
+          const isDefault = DEFAULT_PHOTOS.some((dp) => dp.id === p.id || dp.url === p.url);
+          return !isDefault || p.isCustom;
         });
-        const merged = missingDefaults.length > 0 ? [...updated, ...missingDefaults] : updated;
-        return deduplicatePhotoList(merged);
+        return deduplicatePhotoList(userPhotos);
       }
     }
   } catch (err) {
     console.warn('Could not load photos from localStorage', err);
   }
-  return DEFAULT_PHOTOS;
+  // Return empty list so only user inserted photos are displayed
+  return [];
 }
 
 export function savePhotos(photos: PhotoLibraryItem[]): void {

@@ -19,6 +19,7 @@ interface DayVisualCardProps {
   typography?: TypographySettings;
   id?: string;
   isExporting?: boolean;
+  onOpenPhotoModal?: (dishIndex: number) => void;
 }
 
 export const DayVisualCard: React.FC<DayVisualCardProps> = ({
@@ -30,6 +31,7 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
   typography,
   id = 'day-visual-card',
   isExporting = false,
+  onOpenPhotoModal,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -465,7 +467,15 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                                 boxShadow:
                                   '0 18px 30px -4px rgba(0, 0, 0, 0.45), 0 8px 14px -2px rgba(0, 0, 0, 0.30), 0 3px 6px -1px rgba(0, 0, 0, 0.20), inset 0 2px 4px rgba(255, 255, 255, 0.75), inset 0 -2px 4px rgba(0, 0, 0, 0.20)',
                               }}
-                              className="relative rounded-full overflow-hidden ring-1 ring-black/15 bg-white flex items-center justify-center mx-auto transition-all z-10"
+                              className={`relative rounded-full overflow-hidden ring-1 ring-black/15 bg-white flex items-center justify-center mx-auto transition-all z-10 ${
+                                !isExporting && onOpenPhotoModal ? 'cursor-pointer hover:ring-2 hover:ring-blue-500 group/plate' : ''
+                              }`}
+                              onClick={() => {
+                                if (!isExporting && onOpenPhotoModal) {
+                                  onOpenPhotoModal(index);
+                                }
+                              }}
+                              title={!isExporting && onOpenPhotoModal ? `Cliquer pour choisir la photo du Plat ${index + 1}` : undefined}
                             >
                               {dish.imageUrl ? (
                                 <img
@@ -481,6 +491,12 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                                     className="w-7 h-7 mb-1 opacity-40"
                                   />
                                   <span className="text-[10px] font-semibold text-slate-500">Assiette</span>
+                                </div>
+                              )}
+
+                              {!isExporting && onOpenPhotoModal && (
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/plate:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[9px] font-bold">
+                                  <span>{dish.imageUrl ? 'Changer' : 'Ajouter'}</span>
                                 </div>
                               )}
                             </div>

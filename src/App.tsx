@@ -62,7 +62,10 @@ import {
 export default function App() {
   // Main State
   const [menuData, setMenuData] = useState<WeeklyMenuData>(loadMenuData);
-  const [photos, setPhotos] = useState<PhotoLibraryItem[]>(loadPhotos);
+  const [photos, setPhotos] = useState<PhotoLibraryItem[]>(() => {
+    const initial = loadPhotos();
+    return initial.filter((p) => p.isCustom || !DEFAULT_PHOTOS.some((dp) => dp.id === p.id || dp.url === p.url));
+  });
   const [backgrounds, setBackgrounds] = useState<BackgroundItem[]>(loadBackgrounds);
   const [allergensList, setAllergensList] = useState<AllergenDef[]>(loadAllergens);
   const [activeTab, setActiveTab] = useState<'cover' | DayId>('monday');
@@ -146,7 +149,8 @@ export default function App() {
         if (cloudPhotos && Array.isArray(cloudPhotos)) {
           setPhotos(() => {
             const customCloud = cloudPhotos.map((p) => ({ ...p, isCustom: true }));
-            const combined = deduplicatePhotoList([...customCloud, ...DEFAULT_PHOTOS]);
+            // Only keep photos the user inserted into their library - NEVER force DEFAULT_PHOTOS!
+            const combined = deduplicatePhotoList(customCloud);
             combined.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
             savePhotos(combined);
             return combined;
@@ -253,10 +257,12 @@ export default function App() {
     setIsPhotoModalOpen(true);
   };
 
-  const handleSelectPhoto = (photoUrl: string) => {
-    if (activeCoverPhotoIndex !== undefined) {
-      // Cover page featured photo
-      const targetCoverIdx = activeCoverPhotoIndex;
+  const handleSelectPhoto = (photoUrl: string, targetDay?: DayId | 'cover', targetDishIdx?: number) => {
+    // Determine destination
+    const isTargetCover = targetDay === 'cover' || (targetDay === undefined && activeCoverPhotoIndex !== undefined);
+
+    if (isTargetCover) {
+      const targetCoverIdx = targetDishIdx !== undefined ? targetDishIdx : (activeCoverPhotoIndex ?? 0);
       setMenuData((prev) => {
         const newFeatured = [...(prev.cover.featuredPhotos || [])];
         newFeatured[targetCoverIdx] = photoUrl;
@@ -268,20 +274,35 @@ export default function App() {
           },
         };
       });
-      showToast('Photo de vitrine mise à jour');
-    } else if (activeDishIndex !== undefined && activeTab !== 'cover') {
-      // Day Dish Photo
-      const dayKey = activeTab as DayId;
-      const targetDishIdx = activeDishIndex;
+      showToast(`Photo de vitrine n°${targetCoverIdx + 1} mise à jour`);
+    } else {
+      // Target Day Dish: fallback properly so dish 1 of monday is never lost
+      const dayKey: DayId = targetDay || (activeTab !== 'cover' ? (activeTab as DayId) : 'monday');
+
+      const targetIdx = targetDishIdx !== undefined ? targetDishIdx : (activeDishIndex ?? 0);
+
       setMenuData((prev) => {
         const currentDay = prev.days[dayKey];
         if (!currentDay) return prev;
-        const newDishes = [...currentDay.dishes];
-        if (!newDishes[targetDishIdx]) return prev;
-        newDishes[targetDishIdx] = {
-          ...newDishes[targetDishIdx],
+        const newDishes = [...(currentDay.dishes || [])];
+        
+        // Guarantee dish exists at targetIdx
+        while (newDishes.length <= targetIdx) {
+          const newIdx = newDishes.length;
+          newDishes.push({
+            id: `dish-${dayKey}-${newIdx + 1}`,
+            name: `Plat ${newIdx + 1}`,
+            imageUrl: '',
+            allergens: [],
+            showFrenchMeat: false,
+          });
+        }
+
+        newDishes[targetIdx] = {
+          ...newDishes[targetIdx],
           imageUrl: photoUrl,
         };
+
         return {
           ...prev,
           days: {
@@ -293,10 +314,31 @@ export default function App() {
           },
         };
       });
-      showToast('Photo du plat mise à jour');
+
+      const dayNames: Record<DayId, string> = {
+        monday: 'Lundi',
+        tuesday: 'Mardi',
+        wednesday: 'Mercredi',
+        thursday: 'Jeudi',
+        friday: 'Vendredi',
+      };
+      showToast(`Photo du Plat ${targetIdx + 1} (${dayNames[dayKey] || 'Lundi'}) enregistrée avec succès !`);
     }
+
     setActiveDishIndex(undefined);
     setActiveCoverPhotoIndex(undefined);
+    setIsPhotoModalOpen(false);
+  };
+
+  const handlePurgeDefaultPhotos = () => {
+    setPhotos((prev) => {
+      const purged = prev.filter(
+        (p) => p.isCustom || !DEFAULT_PHOTOS.some((dp) => dp.id === p.id || dp.url === p.url)
+      );
+      savePhotos(purged);
+      return purged;
+    });
+    showToast('Toutes les photos par défaut ont été purgées de votre bibliothèque');
   };
 
   const handleAddCustomPhoto = async (newPhoto: PhotoLibraryItem) => {
@@ -351,7 +393,7 @@ export default function App() {
         const isDef = DEFAULT_PHOTOS.some((d) => d.id === p.id || d.url === p.url);
         return { ...p, isCustom: !isDef };
       });
-      const merged = deduplicatePhotoList([...sanitized, ...prev, ...DEFAULT_PHOTOS]);
+      const merged = deduplicatePhotoList([...sanitized, ...prev]);
       merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       savePhotos(merged);
       mergedCustomCount = merged.filter((p) => p.isCustom).length;
@@ -981,6 +1023,7 @@ export default function App() {
                     backgroundOpacity={menuData.backgroundOpacity}
                     allergensList={allergensList}
                     typography={menuData.typography}
+                    onOpenPhotoModal={handleOpenPhotoModal}
                   />
                 )}
               </div>
@@ -1123,7 +1166,11 @@ export default function App() {
           onDeletePhoto={handleDeletePhoto}
           onUpdatePhoto={handleUpdatePhoto}
           onResetDefaultPhotos={handleResetDefaultPhotos}
+          onPurgeDefaultPhotos={handlePurgeDefaultPhotos}
           onImportPhotos={handleImportPhotos}
+          initialDay={activeTab === 'cover' ? 'monday' : (activeTab as DayId)}
+          initialDishIndex={activeDishIndex ?? 0}
+          initialCoverIndex={activeCoverPhotoIndex}
           currentSelectedUrl={
             activeCoverPhotoIndex !== undefined
               ? menuData.cover.featuredPhotos?.[activeCoverPhotoIndex]

@@ -1480,11 +1480,11 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                       <button
                         type="button"
                         onClick={() => onOpenPhotoModal(idx)}
-                        className="text-[11px] text-slate-700 hover:text-slate-950 font-semibold flex items-center gap-1 transition-colors px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 border border-slate-300 cursor-pointer"
-                        title="Choisir parmi la galerie de photos"
+                        className="text-xs text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200/90 font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-lg cursor-pointer transition-all shadow-2xs"
+                        title="Choisir une photo dans votre bibliothèque pour ce plat"
                       >
-                        <ImageIcon className="w-3 h-3 text-amber-600" />
-                        <span>Galerie</span>
+                        <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Galerie Photos</span>
                       </button>
                     </div>
                   </div>
@@ -1525,23 +1525,13 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                           className="absolute w-16 h-16 rounded-full blur-[4px] translate-y-2 pointer-events-none opacity-80"
                         />
                         <div
-                          onClick={() => {
-                            if (dish.imageUrl) {
-                              setDishCropperTarget({
-                                dishIndex: idx,
-                                imageSrc: dish.imageUrl,
-                                dishName: dish.name || `Plat ${idx + 1}`,
-                              });
-                            } else {
-                              onOpenPhotoModal(idx);
-                            }
-                          }}
+                          onClick={() => onOpenPhotoModal(idx)}
                           style={{
                             boxShadow:
                               '0 12px 22px -3px rgba(0, 0, 0, 0.35), 0 6px 10px -2px rgba(0, 0, 0, 0.20), inset 0 2px 3px rgba(255, 255, 255, 0.75)',
                           }}
                           className="relative w-18 h-18 rounded-full overflow-hidden border-[3px] border-white ring-1 ring-slate-300 hover:ring-blue-500 cursor-pointer bg-white transition-all z-10"
-                          title={dish.imageUrl ? 'Cliquer pour recadrer en rond' : 'Choisir une photo'}
+                          title={dish.imageUrl ? 'Cliquer pour changer la photo depuis la galerie' : 'Choisir une photo dans la galerie'}
                         >
                           {dish.imageUrl ? (
                             <img
@@ -1554,9 +1544,9 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                               <ImageIcon className="w-6 h-6" />
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center transition-opacity text-[8px] text-white font-bold">
-                            <Crop className="w-3.5 h-3.5 mb-0.5" />
-                            {dish.imageUrl ? 'Cadrer' : 'Choisir'}
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 flex flex-col items-center justify-center transition-opacity text-[9px] text-white font-bold gap-0.5">
+                            <ImageIcon className="w-4 h-4 mb-0.5" />
+                            <span>{dish.imageUrl ? 'Changer' : 'Choisir'}</span>
                           </div>
                         </div>
                       </div>
