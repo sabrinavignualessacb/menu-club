@@ -411,13 +411,13 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                           </div>
 
                           {/* Row 2: Dish Name (STRICTLY UNIFORM font size across all dish slots, anti-overflow clamp) */}
-                          <div className="h-[92px] flex items-center justify-center w-full text-center px-1 mb-1 overflow-hidden shrink-0">
+                          <div className="h-[96px] flex items-center justify-center w-full text-center px-1 mb-1 overflow-hidden shrink-0">
                             <h3
                               style={{
                                 ...uniformTitleStyle,
                                 color: resolvedDishTitleColor,
                               }}
-                              className={`${dishTitleFontClass} font-extrabold text-center w-full break-words tracking-tight whitespace-pre-line line-clamp-3 transition-colors`}
+                              className={`${dishTitleFontClass} font-extrabold text-center w-full break-words tracking-tight whitespace-pre-line line-clamp-3 transition-colors leading-[1.15]`}
                             >
                               {dish.name || 'Nom du plat à renseigner'}
                             </h3>
@@ -524,9 +524,9 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
           {/* 5. Footer Mention */}
           <footer
             style={{ borderColor: `${template.borderColor}15` }}
-            className="relative z-10 pt-2 pb-0.5 px-4 flex items-center justify-center border-t"
+            className="relative z-10 pt-2 pb-0.5 px-4 flex items-center justify-center border-t shrink-0 w-full"
           >
-            <p className="font-serif-title italic text-xs text-slate-500 text-center tracking-wide">
+            <p className="font-serif-title italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap">
               Photos non contractuelles
             </p>
           </footer>

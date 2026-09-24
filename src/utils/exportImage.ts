@@ -1,9 +1,10 @@
-import { toPng, toBlob } from 'html-to-image';
+import { toPng } from 'html-to-image';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import confetti from 'canvas-confetti';
+import { EMBEDDED_FONTS_CSS } from './cachedFontsCss';
 
 export interface ExportProgress {
   current: number;
@@ -12,24 +13,6 @@ export interface ExportProgress {
 }
 
 export type ExportResolution = 500 | 1080 | 1440 | 2160;
-
-let cachedGoogleFontsCss: string | null = null;
-
-async function getGoogleFontsEmbedCss(): Promise<string> {
-  if (cachedGoogleFontsCss) return cachedGoogleFontsCss;
-  try {
-    const fontsUrl =
-      'https://fonts.googleapis.com/css2?family=Alex+Brush&family=Bodoni+Moda:ital,opsz,wght@0,6..96,600;0,6..96,800;1,6..96,700&family=Caveat:wght@600;700&family=Cinzel:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Dancing+Script:wght@600;700&family=Outfit:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
-    const res = await fetch(fontsUrl);
-    if (res.ok) {
-      cachedGoogleFontsCss = await res.text();
-      return cachedGoogleFontsCss;
-    }
-  } catch (err) {
-    console.warn('Failed to pre-fetch Google Fonts CSS for export', err);
-  }
-  return '';
-}
 
 /**
  * Ensures images and fonts inside element are fully loaded and rendered before capture
@@ -52,31 +35,13 @@ async function prepareElementForCapture(element: HTMLElement): Promise<void> {
       return new Promise((resolve) => {
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        setTimeout(() => resolve(false), 2500);
-      });
-    })
-  );
-
-  // Pre-load any CSS background images inside element
-  const bgElements = Array.from(element.querySelectorAll<HTMLElement>('[style*="background-image"]'));
-  await Promise.all(
-    bgElements.map((el) => {
-      const match = el.style.backgroundImage.match(/url\(["']?([^"']+)["']?\)/);
-      if (!match || !match[1]) return Promise.resolve(true);
-      const url = match[1];
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(true);
-        img.src = url;
-        setTimeout(() => resolve(true), 2500);
+        setTimeout(() => resolve(false), 2000);
       });
     })
   );
 
   // Micro-delay to let canvas/browser finish layout passes
-  await new Promise((r) => setTimeout(r, 100));
+  await new Promise((r) => setTimeout(r, 80));
 }
 
 /**
@@ -87,23 +52,22 @@ async function captureElementToDataUrl(
   targetResolution: ExportResolution = 1080
 ): Promise<string> {
   await prepareElementForCapture(element);
-  const fontEmbedCSS = await getGoogleFontsEmbedCss();
 
   const rect = element.getBoundingClientRect();
   const width = rect.width || 1080;
-  const height = rect.height || 1080;
   const scale = targetResolution / width;
 
-  // 1. Primary engine: html-to-image with embedded fonts
+  // 1. Primary engine: html-to-image with embedded base64 fonts & skipFonts
   try {
     const dataUrl = await toPng(element, {
       quality: 0.98,
       pixelRatio: Math.max(1, scale),
       canvasWidth: targetResolution,
       canvasHeight: targetResolution,
-      cacheBust: true,
+      cacheBust: false,
       backgroundColor: '#ffffff',
-      fontEmbedCSS: fontEmbedCSS || undefined,
+      skipFonts: true,
+      fontEmbedCSS: EMBEDDED_FONTS_CSS,
       filter: () => true,
     });
     if (dataUrl && dataUrl.length > 500) {
@@ -120,7 +84,7 @@ async function captureElementToDataUrl(
     allowTaint: true,
     backgroundColor: '#ffffff',
     width,
-    height,
+    height: width,
     logging: false,
   });
 
