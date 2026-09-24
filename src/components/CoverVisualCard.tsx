@@ -137,30 +137,39 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             </div>
 
             <h2
-              style={{ color: template.primaryColor }}
-              className="font-sans-clean text-sm font-extrabold tracking-[0.3em] uppercase"
+              style={{
+                color: template.primaryColor,
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+              }}
+              className="text-sm font-extrabold tracking-[0.3em] uppercase"
             >
               {coverData.brandName || "CHEF'S CLUB"}
             </h2>
           </header>
 
           {/* 4. Center Title, Emblem & Dates */}
-          <main className="relative z-10 flex flex-col items-center my-auto py-3 px-4 w-full">
+          <main className="relative z-10 flex flex-col items-center my-auto py-2 px-4 w-full">
             {/* Introductory mention */}
-            <p className="font-serif-title italic text-slate-600 text-[17px] mb-1.5 text-center whitespace-nowrap">
+            <p
+              style={{ fontFamily: "'Playfair Display', serif" }}
+              className="italic text-slate-600 text-[17px] mb-1 text-center whitespace-nowrap"
+            >
               vous présente
             </p>
 
-            {/* Main Title */}
+            {/* Main Title - strictly single-line to avoid any divider collision */}
             <h1
-              style={{ color: template.titleColor }}
-              className="font-serif-title font-black text-[38px] tracking-tight uppercase leading-tight mb-2 text-center"
+              style={{
+                color: template.titleColor,
+                fontFamily: "'Playfair Display', serif",
+              }}
+              className="font-black text-[30px] tracking-tight uppercase leading-tight mb-2 text-center whitespace-nowrap"
             >
               Le Menu de la Semaine
             </h1>
 
             {/* Template-aware accent divider */}
-            <div className="flex items-center gap-3 my-2.5 w-3/4 max-w-xs justify-center shrink-0">
+            <div className="flex items-center gap-3 mt-1 mb-3.5 w-3/4 max-w-xs justify-center shrink-0">
               <span
                 style={{
                   background: `linear-gradient(to right, transparent, ${template.primaryColor}, ${template.accentColor})`,
@@ -205,17 +214,20 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
 
               return (
                 <div
-                  style={{ backgroundColor: template.primaryColor }}
-                  className={`mt-2 mb-3 inline-flex items-center justify-center gap-2.5 text-white rounded-full shadow-lg border border-white/20 transition-all shrink-0 ${activeStyle.container}`}
+                  style={{
+                    backgroundColor: template.primaryColor,
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                  className={`mt-1 mb-3 inline-flex items-center justify-center gap-2.5 text-white rounded-full shadow-lg border border-white/20 transition-all shrink-0 ${activeStyle.container}`}
                 >
                   <Calendar style={{ color: template.crestIconColor }} className={`${activeStyle.calendarSize} shrink-0`} />
-                  <span className="font-sans-clean font-semibold tracking-wide whitespace-nowrap">
+                  <span className="font-semibold tracking-wide whitespace-nowrap">
                     {coverData.subtitlePrefix || 'du'}{' '}
-                    <strong style={{ color: template.crestIconColor }} className="font-extrabold font-sans-clean">
+                    <strong style={{ color: template.crestIconColor }} className="font-extrabold">
                       {coverData.startDate || '31 Août'}
                     </strong>{' '}
                     {coverData.subtitleMiddle || 'au'}{' '}
-                    <strong style={{ color: template.crestIconColor }} className="font-extrabold font-sans-clean">
+                    <strong style={{ color: template.crestIconColor }} className="font-extrabold">
                       {coverData.endDate || '04 Septembre'}
                     </strong>
                     {coverData.year ? ` ${coverData.year}` : ''}
@@ -225,7 +237,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             })()}
 
             {/* Central Culinary Emblem */}
-            <div className="my-2.5 flex flex-col items-center shrink-0">
+            <div className="my-2 flex flex-col items-center shrink-0">
               <div
                 style={{ borderColor: `${template.accentColor}80` }}
                 className="w-14 h-14 rounded-full bg-amber-50/70 border-2 shadow-inner flex items-center justify-center"
@@ -236,8 +248,11 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
 
             {/* Tagline */}
             <p
-              style={{ color: template.accentColor }}
-              className="font-script text-[40px] font-bold drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
+              style={{
+                color: template.accentColor,
+                fontFamily: "'Dancing Script', cursive",
+              }}
+              className="text-[44px] font-bold drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
             >
               Bon Appétit !
             </p>
@@ -248,7 +263,10 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             style={{ borderColor: `${template.borderColor}15` }}
             className="relative z-10 pt-2 pb-0.5 px-4 flex items-center justify-center border-t shrink-0 w-full"
           >
-            <p className="font-serif-title italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap">
+            <p
+              style={{ fontFamily: "'Playfair Display', serif" }}
+              className="italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap"
+            >
               Photos non contractuelles
             </p>
           </footer>

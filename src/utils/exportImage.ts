@@ -61,7 +61,9 @@ async function captureElementToDataUrl(
   try {
     const dataUrl = await toPng(element, {
       quality: 0.98,
-      pixelRatio: Math.max(1, scale),
+      pixelRatio: 1,
+      width: 1080,
+      height: 1080,
       canvasWidth: targetResolution,
       canvasHeight: targetResolution,
       cacheBust: false,
@@ -83,8 +85,8 @@ async function captureElementToDataUrl(
     useCORS: true,
     allowTaint: true,
     backgroundColor: '#ffffff',
-    width,
-    height: width,
+    width: 1080,
+    height: 1080,
     logging: false,
   });
 
