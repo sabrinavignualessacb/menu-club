@@ -847,12 +847,23 @@ export default function App() {
 
   const getFileName = (tabId: 'cover' | DayId): string => {
     if (tabId === 'cover') {
-      const dates = `${menuData.cover.startDate || ''}-${menuData.cover.endDate || ''}`.replace(/\s+/g, '-');
+      const dates = `${menuData.cover.startDate || ''}-${menuData.cover.endDate || ''}`
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '-');
       return `chefs-club-00-garde-${dates}`.toLowerCase();
     }
+    const dayPrefixMap: Record<DayId, string> = {
+      monday: '01-lundi',
+      tuesday: '02-mardi',
+      wednesday: '03-mercredi',
+      thursday: '04-jeudi',
+      friday: '05-vendredi',
+    };
     const day = menuData.days[tabId];
+    const prefix = dayPrefixMap[tabId] || day.dayName.toLowerCase();
     const dateSlug = (day.dateFormatted || '').replace(/\//g, '-').replace(/\s+/g, '-');
-    return `chefs-club-${day.dayName.toLowerCase()}-${dateSlug}`;
+    return `chefs-club-${prefix}-${dateSlug}`;
   };
 
   // Export single page
