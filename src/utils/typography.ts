@@ -57,6 +57,24 @@ export function getFontFamilyClass(fontKey?: string, fallback = 'font-sans-clean
   }
 }
 
+export function getFontFamily(fontKey?: string, fallback = "'Plus Jakarta Sans', sans-serif"): string {
+  switch (fontKey) {
+    case 'outfit':
+      return "'Outfit', sans-serif";
+    case 'playfair':
+      return "'Playfair Display', serif";
+    case 'cormorant':
+      return "'Cormorant Garamond', Georgia, serif";
+    case 'cinzel':
+      return "'Cinzel', serif";
+    case 'script':
+      return "'Dancing Script', cursive";
+    case 'sans':
+    default:
+      return fallback;
+  }
+}
+
 export function getDishTitleClass(
   name: string,
   sizePref?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl',

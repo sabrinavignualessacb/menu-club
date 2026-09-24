@@ -6,6 +6,7 @@ import { UtensilsCrossed, CalendarOff, Sparkles } from 'lucide-react';
 import { MENU_TEMPLATES } from '../data/templates';
 import {
   getFontFamilyClass,
+  getFontFamily,
   getDishLabelSizeClass,
   getUniformDishTitleStyle,
 } from '../utils/typography';
@@ -341,9 +342,12 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                     const ringSize = dishCount === 3 ? 124 : 138;
 
                     const dishLabelFontClass = getFontFamilyClass(typography?.dishLabelFont, 'font-sans-clean');
+                    const dishLabelFontFamily = getFontFamily(typography?.dishLabelFont);
                     const dishLabelSizeClass = getDishLabelSizeClass(typography?.dishLabelSize);
                     const dishTitleFontClass = getFontFamilyClass(typography?.dishTitleFont, 'font-sans-clean');
+                    const dishTitleFontFamily = getFontFamily(typography?.dishTitleFont);
                     const allergenFontClass = getFontFamilyClass(typography?.allergenFont, 'font-sans-clean');
+                    const allergenFontFamily = getFontFamily(typography?.allergenFont);
                     const allergenSize = typography?.allergenSize || 'md';
 
                     // Dynamic color resolution for Plat 1, Plat 2, and Autres
@@ -403,7 +407,10 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                             className="h-7 flex items-center justify-center w-full mb-1 shrink-0 transition-transform"
                           >
                             <span
-                              style={{ color: resolvedDishLabelColor }}
+                              style={{
+                                color: resolvedDishLabelColor,
+                                fontFamily: dishLabelFontFamily,
+                              }}
                               className={`${dishLabelFontClass} ${dishLabelSizeClass} font-bold uppercase tracking-wide text-center block w-full leading-none transition-colors`}
                             >
                               {dish.label && dish.label !== 'Plat 3' ? dish.label : (index === 2 ? 'Autres' : `Plat ${index + 1}`)}
@@ -416,8 +423,10 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                               style={{
                                 ...uniformTitleStyle,
                                 color: resolvedDishTitleColor,
+                                fontFamily: dishTitleFontFamily,
+                                fontWeight: typography?.dishTitleFont === 'cormorant' ? 700 : 800,
                               }}
-                              className={`${dishTitleFontClass} font-extrabold text-center w-full break-words tracking-tight whitespace-pre-line line-clamp-3 transition-colors leading-[1.15]`}
+                              className={`${dishTitleFontClass} text-center w-full break-words tracking-tight whitespace-pre-line line-clamp-3 transition-colors leading-[1.15]`}
                             >
                               {dish.name || 'Nom du plat à renseigner'}
                             </h3>
@@ -432,6 +441,7 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
                               showLabel={dishCount === 2}
                               allergensList={allergensList}
                               fontClass={allergenFontClass}
+                              style={{ fontFamily: allergenFontFamily }}
                             />
                           </div>
 
@@ -526,7 +536,10 @@ export const DayVisualCard: React.FC<DayVisualCardProps> = ({
             style={{ borderColor: `${template.borderColor}15` }}
             className="relative z-10 pt-2 pb-0.5 px-4 flex items-center justify-center border-t shrink-0 w-full"
           >
-            <p className="font-serif-title italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap">
+            <p
+              style={{ fontFamily: getFontFamily(typography?.dishTitleFont || 'playfair') }}
+              className="italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap"
+            >
               Photos non contractuelles
             </p>
           </footer>

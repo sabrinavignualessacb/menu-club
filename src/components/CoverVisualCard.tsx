@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { BackgroundItem, CoverPageData, MenuTemplateId } from '../types';
+import { BackgroundItem, CoverPageData, MenuTemplateId, TypographySettings } from '../types';
 import { UtensilsCrossed, ChefHat, Sparkles, Calendar } from 'lucide-react';
 import { MENU_TEMPLATES } from '../data/templates';
+import { getFontFamily } from '../utils/typography';
 
 interface CoverVisualCardProps {
   coverData: CoverPageData;
   backgrounds: BackgroundItem[];
   templateId?: MenuTemplateId;
   backgroundOpacity?: number;
+  typography?: TypographySettings;
   id?: string;
   isExporting?: boolean;
 }
@@ -17,6 +19,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
   backgrounds,
   templateId = 'classic-navy',
   backgroundOpacity,
+  typography,
   id = 'cover-visual-card',
   isExporting = false,
 }) => {
@@ -24,6 +27,9 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
   const [scale, setScale] = useState(isExporting ? 1.5 : 1);
 
   const template = MENU_TEMPLATES[templateId] || MENU_TEMPLATES['classic-navy'];
+
+  // Resolve title font dynamically based on user typography settings (e.g. Cormorant Garamond for Gastronomique)
+  const resolvedTitleFont = getFontFamily(typography?.dishTitleFont || 'playfair');
 
   // Resolve background opacity (cover-specific override > global menu opacity > default 70)
   const resolvedBgOpacity =
@@ -151,22 +157,31 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
           <main className="relative z-10 flex flex-col items-center my-auto py-2 px-4 w-full">
             {/* Introductory mention */}
             <p
-              style={{ fontFamily: "'Playfair Display', serif" }}
+              style={{ fontFamily: resolvedTitleFont }}
               className="italic text-slate-600 text-[17px] mb-1 text-center whitespace-nowrap"
             >
               vous présente
             </p>
 
             {/* Main Title - strictly single-line to avoid any divider collision */}
-            <h1
-              style={{
-                color: template.titleColor,
-                fontFamily: "'Playfair Display', serif",
-              }}
-              className="font-black text-[30px] tracking-tight uppercase leading-tight mb-2 text-center whitespace-nowrap"
-            >
-              Le Menu de la Semaine
-            </h1>
+            {(() => {
+              const titleText = (coverData.title || 'Le Menu de la Semaine').trim();
+              const isLongTitle = titleText.length > 22;
+              return (
+                <h1
+                  style={{
+                    color: template.titleColor,
+                    fontFamily: resolvedTitleFont,
+                    fontWeight: 700,
+                  }}
+                  className={`tracking-tight uppercase leading-tight mb-2 text-center whitespace-nowrap ${
+                    isLongTitle ? 'text-[25px]' : 'text-[29px]'
+                  }`}
+                >
+                  {titleText}
+                </h1>
+              );
+            })()}
 
             {/* Template-aware accent divider */}
             <div className="flex items-center gap-3 mt-1 mb-3.5 w-3/4 max-w-xs justify-center shrink-0">
@@ -187,7 +202,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
 
             {/* Subtitle Date Range Badge */}
             {(() => {
-              const size = coverData.dateSize || 'md';
+              const size = coverData.dateSize || typography?.coverDateSize || 'md';
               const sizeStyles = {
                 md: {
                   container: 'px-7 py-2.5 text-sm',
@@ -251,10 +266,11 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
               style={{
                 color: template.accentColor,
                 fontFamily: "'Dancing Script', cursive",
+                fontWeight: 700,
               }}
-              className="text-[44px] font-bold drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
+              className="text-[44px] drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
             >
-              Bon Appétit !
+              {coverData.tagline || 'Bon Appétit !'}
             </p>
           </main>
 
@@ -264,7 +280,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             className="relative z-10 pt-2 pb-0.5 px-4 flex items-center justify-center border-t shrink-0 w-full"
           >
             <p
-              style={{ fontFamily: "'Playfair Display', serif" }}
+              style={{ fontFamily: resolvedTitleFont }}
               className="italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap"
             >
               Photos non contractuelles

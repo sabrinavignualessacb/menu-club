@@ -14,34 +14,114 @@ export interface ExportProgress {
 
 export type ExportResolution = 500 | 1080 | 1440 | 2160;
 
+const dataUrlCache = new Map<string, string>();
+
+async function urlToDataUrl(url: string): Promise<string> {
+  if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (dataUrlCache.has(url)) return dataUrlCache.get(url)!;
+
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    const blob = await res.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        dataUrlCache.set(url, result);
+        resolve(result);
+      };
+      reader.onerror = () => resolve(url);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    // If fetch fails, try image-to-canvas fallback
+    return new Promise<string>((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth || 800;
+          canvas.height = img.naturalHeight || 800;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const data = canvas.toDataURL('image/jpeg', 0.92);
+            dataUrlCache.set(url, data);
+            resolve(data);
+            return;
+          }
+        } catch {
+          // ignore
+        }
+        resolve(url);
+      };
+      img.onerror = () => resolve(url);
+      img.src = url;
+    });
+  }
+}
+
 /**
  * Ensures images and fonts inside element are fully loaded and rendered before capture
  */
 async function prepareElementForCapture(element: HTMLElement): Promise<void> {
-  // Wait for document fonts
-  if (document.fonts && document.fonts.ready) {
+  // 1. Force load document fonts into memory
+  if (document.fonts) {
     try {
-      await document.fonts.ready;
+      await Promise.allSettled([
+        document.fonts.load("700 24px 'Cormorant Garamond'"),
+        document.fonts.load("600 24px 'Cormorant Garamond'"),
+        document.fonts.load("700 30px 'Playfair Display'"),
+        document.fonts.load("700 44px 'Dancing Script'"),
+        document.fonts.load("700 16px 'Plus Jakarta Sans'"),
+        document.fonts.load("700 16px 'Cinzel'"),
+        document.fonts.ready,
+      ]);
     } catch {
       // Ignore font wait failures
     }
   }
 
-  // Pre-load all <img> tags inside element
+  // 2. Pre-inline all <img> tags inside element
   const imgs = Array.from(element.querySelectorAll('img'));
   await Promise.all(
-    imgs.map((img) => {
-      if (img.complete && img.naturalHeight !== 0) return Promise.resolve(true);
+    imgs.map(async (img) => {
+      if (img.src && !img.src.startsWith('data:') && !img.src.startsWith('blob:')) {
+        const inlined = await urlToDataUrl(img.src);
+        if (inlined && inlined.startsWith('data:')) {
+          img.src = inlined;
+        }
+      }
+      if (img.complete && img.naturalHeight !== 0) return true;
       return new Promise((resolve) => {
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        setTimeout(() => resolve(false), 2000);
+        setTimeout(() => resolve(false), 1500);
       });
     })
   );
 
-  // Micro-delay to let canvas/browser finish layout passes
-  await new Promise((r) => setTimeout(r, 80));
+  // 3. Pre-inline all background-image styles in element & children
+  const nodes = Array.from(element.querySelectorAll<HTMLElement>('*'));
+  nodes.push(element);
+  await Promise.all(
+    nodes.map(async (node) => {
+      const bg = node.style.backgroundImage;
+      if (bg && bg.includes('url(') && !bg.includes('data:')) {
+        const match = bg.match(/url\(['"]?(https?:\/\/[^'")]+)['"]?\)/);
+        if (match && match[1]) {
+          const inlined = await urlToDataUrl(match[1]);
+          if (inlined && inlined.startsWith('data:')) {
+            node.style.backgroundImage = `url("${inlined}")`;
+          }
+        }
+      }
+    })
+  );
+
+  // Micro-delay to let browser finish layout and paint passes
+  await new Promise((r) => setTimeout(r, 60));
 }
 
 /**
@@ -51,46 +131,69 @@ async function captureElementToDataUrl(
   element: HTMLElement,
   targetResolution: ExportResolution = 1080
 ): Promise<string> {
-  await prepareElementForCapture(element);
+  const container = document.getElementById('export-nodes-container');
+  const originalContainerOpacity = container ? container.style.opacity : undefined;
+  const originalContainerVisibility = container ? container.style.visibility : undefined;
 
-  const rect = element.getBoundingClientRect();
-  const width = rect.width || 1080;
-  const scale = targetResolution / width;
-
-  // 1. Primary engine: html-to-image with embedded base64 fonts & skipFonts
-  try {
-    const dataUrl = await toPng(element, {
-      quality: 0.98,
-      pixelRatio: 1,
-      width: 1080,
-      height: 1080,
-      canvasWidth: targetResolution,
-      canvasHeight: targetResolution,
-      cacheBust: false,
-      backgroundColor: '#ffffff',
-      skipFonts: true,
-      fontEmbedCSS: EMBEDDED_FONTS_CSS,
-      filter: () => true,
-    });
-    if (dataUrl && dataUrl.length > 500) {
-      return dataUrl;
-    }
-  } catch (err) {
-    console.warn('html-to-image capture encountered an issue, attempting html2canvas fallback', err);
+  // Temporarily reveal capture node to the layout engine (behind viewport)
+  if (container) {
+    container.style.opacity = '1';
+    container.style.visibility = 'visible';
   }
 
-  // 2. Secondary fallback engine: html2canvas
-  const canvas = await html2canvas(element, {
-    scale: Math.max(1, scale),
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    width: 1080,
-    height: 1080,
-    logging: false,
-  });
+  try {
+    await prepareElementForCapture(element);
 
-  return canvas.toDataURL('image/png', 0.98);
+    const rect = element.getBoundingClientRect();
+    const width = rect.width || 1080;
+    const scale = targetResolution / width;
+
+    // 1. Primary engine: html-to-image with embedded base64 fonts & skipFonts
+    try {
+      const dataUrl = await toPng(element, {
+        quality: 0.98,
+        pixelRatio: 1,
+        width: 1080,
+        height: 1080,
+        canvasWidth: targetResolution,
+        canvasHeight: targetResolution,
+        cacheBust: false,
+        backgroundColor: '#ffffff',
+        skipFonts: true,
+        fontEmbedCSS: EMBEDDED_FONTS_CSS,
+        filter: () => true,
+      });
+      if (dataUrl && dataUrl.length > 500) {
+        return dataUrl;
+      }
+    } catch (err) {
+      console.warn('html-to-image capture encountered an issue, attempting html2canvas fallback', err);
+    }
+
+    // 2. Secondary fallback engine: html2canvas
+    const canvas = await html2canvas(element, {
+      scale: Math.max(1, scale),
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: 1080,
+      height: 1080,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 1080,
+      windowHeight: 1080,
+      logging: false,
+    });
+
+    return canvas.toDataURL('image/png', 0.98);
+  } finally {
+    if (container && originalContainerOpacity !== undefined) {
+      container.style.opacity = originalContainerOpacity;
+      container.style.visibility = originalContainerVisibility || 'visible';
+    }
+  }
 }
 
 /**

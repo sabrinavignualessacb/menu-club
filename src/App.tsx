@@ -1170,6 +1170,7 @@ export default function App() {
                     backgrounds={backgrounds}
                     templateId={menuData.templateId}
                     backgroundOpacity={menuData.backgroundOpacity}
+                    typography={menuData.typography}
                   />
                 ) : (
                   <DayVisualCard
@@ -1199,15 +1200,19 @@ export default function App() {
         />
       </main>
 
-      {/* 4. OFF-SCREEN 1080x1080 CAPTURE NODES (Clean individual 1080x1080 canvases with 100% opacity, completely off-screen) */}
+      {/* 4. OFF-SCREEN 1080x1080 CAPTURE NODES (Rendered at origin 0,0 behind all layers so font metrics & wrapping match live screen 100%) */}
       <div
+        id="export-nodes-container"
         style={{
           position: 'fixed',
-          left: '-9999px',
+          left: '0px',
           top: '0px',
+          width: '1080px',
+          height: '1080px',
           pointerEvents: 'none',
-          zIndex: -9999,
-          opacity: 1,
+          zIndex: -99999,
+          opacity: 0,
+          overflow: 'hidden',
         }}
         aria-hidden="true"
       >
@@ -1218,6 +1223,7 @@ export default function App() {
             backgrounds={backgrounds}
             templateId={menuData.templateId}
             backgroundOpacity={menuData.backgroundOpacity}
+            typography={menuData.typography}
             isExporting
           />
         </div>

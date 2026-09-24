@@ -9,6 +9,7 @@ interface AllergenBadgeProps {
   showLabel?: boolean;
   allergensList?: AllergenDef[];
   fontClass?: string;
+  style?: React.CSSProperties;
 }
 
 export const AllergenBadge: React.FC<AllergenBadgeProps> = ({
@@ -18,6 +19,7 @@ export const AllergenBadge: React.FC<AllergenBadgeProps> = ({
   showLabel = true,
   allergensList,
   fontClass = 'font-sans-clean',
+  style,
 }) => {
   if ((!allergens || allergens.length === 0) && !customText) {
     return null;
@@ -36,7 +38,7 @@ export const AllergenBadge: React.FC<AllergenBadgeProps> = ({
   };
 
   return (
-    <div className="inline-flex items-center gap-1.5 flex-wrap justify-center">
+    <div style={style} className="inline-flex items-center gap-1.5 flex-wrap justify-center">
       {showLabel && (
         <span className={`${fontClass} font-semibold text-slate-700 tracking-tight ${labelSizes[size]}`}>
           {allergens.length > 1 ? 'Allergènes :' : 'Allergène :'}
