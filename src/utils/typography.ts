@@ -102,42 +102,42 @@ export function getDishTitleClass(
     return 'text-[17px] leading-[1.16]';
   }
 
-  // 3-dish layout: 214px columns
+  // 3-dish layout: columns - boosted for legibility & visual parity with 2 dishes
   if (sizePref === 'sm') {
-    if (len <= 26) return 'text-[16px] leading-[1.18]';
-    if (len <= 46) return 'text-[14px] leading-[1.16]';
-    return 'text-[12.5px] leading-[1.14]';
+    if (len <= 26) return 'text-[19px] leading-[1.20]';
+    if (len <= 46) return 'text-[17px] leading-[1.18]';
+    return 'text-[15.5px] leading-[1.15]';
   }
   if (sizePref === 'lg') {
-    if (len <= 24) return 'text-[24px] leading-[1.20]';
-    if (len <= 42) return 'text-[21px] leading-[1.18]';
-    if (len <= 62) return 'text-[18.5px] leading-[1.16]';
-    return 'text-[16.5px] leading-[1.15]';
+    if (len <= 24) return 'text-[26px] leading-[1.22]';
+    if (len <= 42) return 'text-[23.5px] leading-[1.20]';
+    if (len <= 62) return 'text-[21px] leading-[1.18]';
+    return 'text-[19px] leading-[1.16]';
   }
   if (sizePref === 'xl') {
-    if (len <= 24) return 'text-[27px] leading-[1.22]';
-    if (len <= 42) return 'text-[24px] leading-[1.18]';
-    if (len <= 62) return 'text-[21px] leading-[1.16]';
-    return 'text-[18px] leading-[1.15]';
+    if (len <= 24) return 'text-[30px] leading-[1.22]';
+    if (len <= 42) return 'text-[26.5px] leading-[1.20]';
+    if (len <= 62) return 'text-[23.5px] leading-[1.18]';
+    return 'text-[21px] leading-[1.16]';
   }
   if (sizePref === '2xl') {
-    if (len <= 24) return 'text-[30px] leading-[1.22]';
-    if (len <= 42) return 'text-[26px] leading-[1.18]';
-    if (len <= 62) return 'text-[23px] leading-[1.16]';
-    return 'text-[20px] leading-[1.15]';
+    if (len <= 24) return 'text-[34px] leading-[1.22]';
+    if (len <= 42) return 'text-[30px] leading-[1.20]';
+    if (len <= 62) return 'text-[26px] leading-[1.18]';
+    return 'text-[23px] leading-[1.16]';
   }
   if (sizePref === '3xl') {
-    if (len <= 24) return 'text-[33px] leading-[1.22]';
-    if (len <= 42) return 'text-[28px] leading-[1.18]';
-    if (len <= 62) return 'text-[25px] leading-[1.16]';
-    return 'text-[22px] leading-[1.15]';
+    if (len <= 24) return 'text-[38px] leading-[1.22]';
+    if (len <= 42) return 'text-[33px] leading-[1.20]';
+    if (len <= 62) return 'text-[28px] leading-[1.18]';
+    return 'text-[25px] leading-[1.16]';
   }
 
   // Default 'md' for 3 dishes
-  if (len <= 24) return 'text-[20px] leading-[1.20]';
-  if (len <= 42) return 'text-[18px] leading-[1.18]';
-  if (len <= 62) return 'text-[16px] leading-[1.16]';
-  return 'text-[14.5px] leading-[1.15]';
+  if (len <= 24) return 'text-[23px] leading-[1.22]';
+  if (len <= 42) return 'text-[20.5px] leading-[1.20]';
+  if (len <= 62) return 'text-[18.5px] leading-[1.18]';
+  return 'text-[17px] leading-[1.16]';
 }
 
 /**
@@ -168,13 +168,13 @@ export function getUniformDishTitleStyle(
     else if (sizePref === '3xl') basePx = maxLen <= 24 ? 40 : maxLen <= 42 ? 35 : maxLen <= 62 ? 30 : 26;
     else basePx = maxLen <= 24 ? 24 : maxLen <= 42 ? 21 : maxLen <= 62 ? 19 : 17;
   } else {
-    // 3 dishes
-    if (sizePref === 'sm') basePx = maxLen <= 26 ? 16 : maxLen <= 46 ? 14 : 12.5;
-    else if (sizePref === 'lg') basePx = maxLen <= 24 ? 23 : maxLen <= 42 ? 20 : maxLen <= 62 ? 18 : 16;
-    else if (sizePref === 'xl') basePx = maxLen <= 24 ? 26 : maxLen <= 42 ? 23 : maxLen <= 62 ? 20 : 17.5;
-    else if (sizePref === '2xl') basePx = maxLen <= 24 ? 29 : maxLen <= 42 ? 25 : maxLen <= 62 ? 22 : 19;
-    else if (sizePref === '3xl') basePx = maxLen <= 24 ? 32 : maxLen <= 42 ? 27 : maxLen <= 62 ? 24 : 21;
-    else basePx = maxLen <= 24 ? 20 : maxLen <= 42 ? 18 : maxLen <= 62 ? 16 : 14.5;
+    // 3 dishes - elevated sizes to avoid being too small compared to 2 dishes
+    if (sizePref === 'sm') basePx = maxLen <= 26 ? 19 : maxLen <= 46 ? 17 : 15.5;
+    else if (sizePref === 'lg') basePx = maxLen <= 24 ? 26 : maxLen <= 42 ? 23.5 : maxLen <= 62 ? 21 : 19;
+    else if (sizePref === 'xl') basePx = maxLen <= 24 ? 30 : maxLen <= 42 ? 26.5 : maxLen <= 62 ? 23.5 : 21;
+    else if (sizePref === '2xl') basePx = maxLen <= 24 ? 34 : maxLen <= 42 ? 30 : maxLen <= 62 ? 26 : 23;
+    else if (sizePref === '3xl') basePx = maxLen <= 24 ? 38 : maxLen <= 42 ? 33 : maxLen <= 62 ? 28 : 25;
+    else basePx = maxLen <= 24 ? 23 : maxLen <= 42 ? 20.5 : maxLen <= 62 ? 18.5 : 17;
   }
 
   const finalPx = Math.round(basePx * (scalePercent / 100) * 10) / 10;
@@ -204,12 +204,12 @@ export function getDishTitleStyle(
     else if (sizePref === '3xl') basePx = len <= 24 ? 40 : len <= 42 ? 35 : len <= 62 ? 30 : 26;
     else basePx = len <= 24 ? 24 : len <= 42 ? 21 : len <= 62 ? 19 : 17;
   } else {
-    if (sizePref === 'sm') basePx = len <= 26 ? 16 : len <= 46 ? 14 : 12.5;
-    else if (sizePref === 'lg') basePx = len <= 24 ? 23 : len <= 42 ? 20 : len <= 62 ? 18 : 16;
-    else if (sizePref === 'xl') basePx = len <= 24 ? 26 : len <= 42 ? 23 : len <= 62 ? 20 : 17.5;
-    else if (sizePref === '2xl') basePx = len <= 24 ? 29 : len <= 42 ? 25 : len <= 62 ? 22 : 19;
-    else if (sizePref === '3xl') basePx = len <= 24 ? 32 : len <= 42 ? 27 : len <= 62 ? 24 : 21;
-    else basePx = len <= 24 ? 20 : len <= 42 ? 18 : len <= 62 ? 16 : 14.5;
+    if (sizePref === 'sm') basePx = len <= 26 ? 19 : len <= 46 ? 17 : 15.5;
+    else if (sizePref === 'lg') basePx = len <= 24 ? 26 : len <= 42 ? 23.5 : len <= 62 ? 21 : 19;
+    else if (sizePref === 'xl') basePx = len <= 24 ? 30 : len <= 42 ? 26.5 : len <= 62 ? 23.5 : 21;
+    else if (sizePref === '2xl') basePx = len <= 24 ? 34 : len <= 42 ? 30 : len <= 62 ? 26 : 23;
+    else if (sizePref === '3xl') basePx = len <= 24 ? 38 : len <= 42 ? 33 : len <= 62 ? 28 : 25;
+    else basePx = len <= 24 ? 23 : len <= 42 ? 20.5 : len <= 62 ? 18.5 : 17;
   }
 
   const finalPx = Math.round(basePx * (scalePercent / 100) * 10) / 10;

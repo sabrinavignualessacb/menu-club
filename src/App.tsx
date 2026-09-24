@@ -1199,23 +1199,20 @@ export default function App() {
         />
       </main>
 
-      {/* 4. HIDDEN 1080x1080 CAPTURE NODES (Guarantees exact, razor-sharp renders without browser coordinate culling) */}
+      {/* 4. OFF-SCREEN 1080x1080 CAPTURE NODES (Clean individual 1080x1080 canvases with 100% opacity, completely off-screen) */}
       <div
         style={{
           position: 'fixed',
-          left: 0,
-          top: 0,
-          width: '1080px',
-          height: '1080px',
+          left: '-9999px',
+          top: '0px',
           pointerEvents: 'none',
-          opacity: 0.001,
-          zIndex: -100,
-          overflow: 'hidden',
+          zIndex: -9999,
+          opacity: 1,
         }}
         aria-hidden="true"
       >
         {/* Cover Page */}
-        <div ref={exportTargetCoverRef} className="w-[1080px] h-[1080px]">
+        <div ref={exportTargetCoverRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
           <CoverVisualCard
             coverData={menuData.cover}
             backgrounds={backgrounds}
@@ -1226,7 +1223,7 @@ export default function App() {
         </div>
 
         {/* Monday */}
-        <div ref={exportTargetMondayRef} className="w-[1080px] h-[1080px]">
+        <div ref={exportTargetMondayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
           <DayVisualCard
             dayMenu={menuData.days.monday}
             backgrounds={backgrounds}
@@ -1239,7 +1236,7 @@ export default function App() {
         </div>
 
         {/* Tuesday */}
-        <div ref={exportTargetTuesdayRef} className="w-[1080px] h-[1080px]">
+        <div ref={exportTargetTuesdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
           <DayVisualCard
             dayMenu={menuData.days.tuesday}
             backgrounds={backgrounds}
@@ -1252,7 +1249,7 @@ export default function App() {
         </div>
 
         {/* Wednesday */}
-        <div ref={exportTargetWednesdayRef} className="w-[1080px] h-[1080px]">
+        <div ref={exportTargetWednesdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
           <DayVisualCard
             dayMenu={menuData.days.wednesday}
             backgrounds={backgrounds}
@@ -1265,7 +1262,7 @@ export default function App() {
         </div>
 
         {/* Thursday */}
-        <div ref={exportTargetThursdayRef} className="w-[1080px] h-[1080px]">
+        <div ref={exportTargetThursdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
           <DayVisualCard
             dayMenu={menuData.days.thursday}
             backgrounds={backgrounds}
@@ -1278,7 +1275,7 @@ export default function App() {
         </div>
 
         {/* Friday */}
-        <div ref={exportTargetFridayRef} className="w-[1080px] h-[1080px]">
+        <div ref={exportTargetFridayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
           <DayVisualCard
             dayMenu={menuData.days.friday}
             backgrounds={backgrounds}

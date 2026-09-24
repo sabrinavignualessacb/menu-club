@@ -21,7 +21,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
   isExporting = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const [scale, setScale] = useState(isExporting ? 1.5 : 1);
 
   const template = MENU_TEMPLATES[templateId] || MENU_TEMPLATES['classic-navy'];
 
