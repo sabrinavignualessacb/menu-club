@@ -805,18 +805,31 @@ export const PhotoLibraryModal: React.FC<PhotoLibraryModalProps> = ({
                       } else {
                         // Batch load into library directly
                         const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          const url = ev.target?.result as string;
-                          if (url) {
-                            onAddPhoto({
-                              id: `custom-photo-${Date.now()}-${idx}`,
-                              name: f.name.replace(/\.[^/.]+$/, ''),
-                              category: 'plat',
-                              url,
-                              originalUrl: url,
-                              isCustom: true,
-                              createdAt: Date.now(),
-                            });
+                        reader.onload = async (ev) => {
+                          const rawUrl = ev.target?.result as string;
+                          if (rawUrl) {
+                            try {
+                              const compressed = await compressImage(rawUrl, 600, 0.80);
+                              onAddPhoto({
+                                id: `custom-photo-${Date.now()}-${idx}`,
+                                name: f.name.replace(/\.[^/.]+$/, ''),
+                                category: 'plat',
+                                url: compressed,
+                                originalUrl: compressed,
+                                isCustom: true,
+                                createdAt: Date.now() + idx,
+                              });
+                            } catch {
+                              onAddPhoto({
+                                id: `custom-photo-${Date.now()}-${idx}`,
+                                name: f.name.replace(/\.[^/.]+$/, ''),
+                                category: 'plat',
+                                url: rawUrl,
+                                originalUrl: rawUrl,
+                                isCustom: true,
+                                createdAt: Date.now() + idx,
+                              });
+                            }
                           }
                         };
                         reader.readAsDataURL(f);

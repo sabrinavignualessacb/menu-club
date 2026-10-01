@@ -75,6 +75,7 @@ interface MenuEditorProps {
     section?: 'all' | 'dishTitle' | 'dishLabel' | 'labelPosition' | 'dishColors' | 'plateCircle' | 'allergen' | 'backgroundOpacity'
   ) => void;
   onLoadExampleMenu: () => void;
+  onAddPhoto?: (photo: PhotoLibraryItem) => void;
 }
 
 export const MenuEditor: React.FC<MenuEditorProps> = ({
@@ -90,6 +91,7 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   onOpenAllergenModal,
   onOpenTypographyModal,
   onLoadExampleMenu,
+  onAddPhoto,
 }) => {
   const isCover = activeTab === 'cover';
   const currentDay: DayMenu | undefined = !isCover ? menuData.days[activeTab as DayId] : undefined;
@@ -406,6 +408,17 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
   const handleDishCropConfirmed = (croppedDataUrl: string) => {
     if (dishCropperTarget) {
       updateDish(dishCropperTarget.dishIndex, { imageUrl: croppedDataUrl });
+      if (onAddPhoto) {
+        onAddPhoto({
+          id: `custom-photo-${Date.now()}`,
+          name: dishCropperTarget.dishName || 'Plat cuisiné',
+          category: 'plat',
+          url: croppedDataUrl,
+          originalUrl: dishCropperTarget.imageSrc || croppedDataUrl,
+          isCustom: true,
+          createdAt: Date.now(),
+        });
+      }
       setDishCropperTarget(null);
     }
   };
@@ -1000,6 +1013,26 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                     }));
                   }}
                   className="w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500 focus:bg-white font-semibold tracking-wider uppercase shadow-2xs"
+                />
+              </div>
+
+              {/* Cover Main Title (under 'vous présente') */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Titre principal (sous « vous présente »)
+                </label>
+                <input
+                  type="text"
+                  placeholder="MENU DE LA SEMAINE"
+                  value={menuData.cover.title || 'MENU DE LA SEMAINE'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onUpdateMenu((prev) => ({
+                      ...prev,
+                      cover: { ...prev.cover, title: val },
+                    }));
+                  }}
+                  className="w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500 focus:bg-white font-bold tracking-wider uppercase shadow-2xs"
                 />
               </div>
 

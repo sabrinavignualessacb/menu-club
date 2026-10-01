@@ -13,6 +13,16 @@ import {
   subscribeToCloudCategories,
   saveCategoriesToCloud,
 } from '../firebase/storageService';
+import {
+  savePhotosToIndexedDb,
+  loadPhotosFromIndexedDb,
+  saveMenuToIndexedDb,
+  loadMenuFromIndexedDb,
+  saveMenuBackupToIndexedDb,
+  loadMenuBackupFromIndexedDb,
+  saveSinglePhotoToIndexedDb,
+  deletePhotoFromIndexedDb,
+} from './dbStorage';
 
 export {
   saveMenuToCloud,
@@ -25,6 +35,14 @@ export {
   deleteBackgroundFromCloud,
   subscribeToCloudCategories,
   saveCategoriesToCloud,
+  savePhotosToIndexedDb,
+  loadPhotosFromIndexedDb,
+  saveMenuToIndexedDb,
+  loadMenuFromIndexedDb,
+  saveMenuBackupToIndexedDb,
+  loadMenuBackupFromIndexedDb,
+  saveSinglePhotoToIndexedDb,
+  deletePhotoFromIndexedDb,
 };
 
 const MENU_STORAGE_KEY = 'chefs_club_weekly_menu_v5';
@@ -84,6 +102,14 @@ export function loadMenuData(): WeeklyMenuData {
         if (parsed.backgroundOpacity === undefined) {
           parsed.backgroundOpacity = 70;
         }
+        // Normalize cover title to "MENU DE LA SEMAINE" if empty or verbose legacy string
+        if (
+          !parsed.cover.title ||
+          parsed.cover.title.toLowerCase().includes('vous présente') ||
+          parsed.cover.title.trim().toLowerCase() === 'menu du chef'
+        ) {
+          parsed.cover.title = 'MENU DE LA SEMAINE';
+        }
         return parsed;
       }
     }
@@ -94,6 +120,9 @@ export function loadMenuData(): WeeklyMenuData {
 }
 
 export function saveMenuData(data: WeeklyMenuData): void {
+  // Always persist to IndexedDB asynchronously (virtually unlimited quota)
+  saveMenuToIndexedDb(data).catch((err) => console.warn('IndexedDB saveMenu error', err));
+
   try {
     localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data));
   } catch (err) {
@@ -108,7 +137,7 @@ export function saveMenuData(data: WeeklyMenuData): void {
       legacyKeys.forEach((k) => localStorage.removeItem(k));
       localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(data));
     } catch (e2) {
-      console.error('Final attempt to save menu data failed', e2);
+      console.error('Final attempt to save menu data to localStorage failed (data remains safe in IndexedDB)', e2);
     }
   }
 }
@@ -117,7 +146,6 @@ export function deduplicatePhotoList(photos: PhotoLibraryItem[]): PhotoLibraryIt
   if (!photos || !Array.isArray(photos)) return [];
   const seenIds = new Set<string>();
   const seenUrls = new Set<string>();
-  const seenCustomNames = new Set<string>();
   const result: PhotoLibraryItem[] = [];
 
   for (const photo of photos) {
@@ -126,19 +154,11 @@ export function deduplicatePhotoList(photos: PhotoLibraryItem[]): PhotoLibraryIt
     // 1. Never duplicate exact same ID
     if (photo.id && seenIds.has(photo.id)) continue;
 
-    // 2. Never duplicate exact same image URL
+    // 2. Never duplicate exact same image content/URL
     if (seenUrls.has(photo.url)) continue;
 
-    // 3. For custom photos, never duplicate exact same dish name (trimmed, lowercased)
-    if (photo.isCustom && photo.name) {
-      const normName = photo.name.trim().toLowerCase();
-      if (normName && seenCustomNames.has(normName)) {
-        continue;
-      }
-      if (normName) {
-        seenCustomNames.add(normName);
-      }
-    }
+    // NOTE: NEVER deduplicate by photo.name! Multiple dishes or photos can legitimately share
+    // the same name (e.g. "Assiette de plat", "Entrée du jour", "Poisson", etc.).
 
     if (photo.id) {
       seenIds.add(photo.id);
@@ -174,11 +194,15 @@ export function loadPhotos(): PhotoLibraryItem[] {
 }
 
 export function savePhotos(photos: PhotoLibraryItem[]): void {
+  const deduped = deduplicatePhotoList(photos);
+
+  // 1. Persist full list to IndexedDB (virtually unlimited quota, never throws 5MB quota errors)
+  savePhotosToIndexedDb(deduped).catch((err) => console.warn('IndexedDB savePhotos error', err));
+
+  // 2. Also save to localStorage as fast-boot cache (strip redundant bloat if needed)
   try {
-    const deduped = deduplicatePhotoList(photos);
-    // Strip redundant or bloated originalUrls from storage to protect localStorage quota
     const lightweightPhotos = deduped.map((p) => {
-      if (p.originalUrl && (p.originalUrl === p.url || p.originalUrl.length > 150000)) {
+      if (p.originalUrl && (p.originalUrl === p.url || p.originalUrl.length > 100000)) {
         const { originalUrl, ...rest } = p;
         return rest;
       }
@@ -186,12 +210,12 @@ export function savePhotos(photos: PhotoLibraryItem[]): void {
     });
     localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(lightweightPhotos));
   } catch (err) {
-    console.warn('Could not save photos to localStorage, applying quota safeguard', err);
+    console.warn('Could not save photos to localStorage (persisted safely in IndexedDB)', err);
     try {
-      const minimalPhotos = deduplicatePhotoList(photos).map(({ originalUrl, ...rest }) => rest);
+      const minimalPhotos = deduped.map(({ originalUrl, ...rest }) => rest);
       localStorage.setItem(PHOTOS_STORAGE_KEY, JSON.stringify(minimalPhotos));
     } catch (e2) {
-      console.error('Fallback saving photos failed', e2);
+      console.warn('Minimal localStorage save also full, IndexedDB holds the authoritative data');
     }
   }
 }

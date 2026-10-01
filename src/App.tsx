@@ -23,6 +23,12 @@ import {
   deletePhotoFromCloud,
   subscribeToCloudBackgrounds,
   saveBackgroundToCloud,
+  loadPhotosFromIndexedDb,
+  savePhotosToIndexedDb,
+  saveSinglePhotoToIndexedDb,
+  deletePhotoFromIndexedDb,
+  saveMenuBackupToIndexedDb,
+  loadMenuBackupFromIndexedDb,
 } from './utils/storage';
 import { INITIAL_WEEKLY_MENU, DEFAULT_BACKGROUNDS, DEFAULT_PHOTOS } from './data/defaultData';
 import { DayVisualCard } from './components/DayVisualCard';
@@ -50,6 +56,8 @@ import {
   Edit,
   Image as ImageIcon,
   RotateCcw,
+  Undo2,
+  AlertTriangle,
   Eye,
   ChefHat,
   Check,
@@ -91,6 +99,17 @@ export default function App() {
   // Targets for modals
   const [activeDishIndex, setActiveDishIndex] = useState<number | undefined>(undefined);
   const [activeCoverPhotoIndex, setActiveCoverPhotoIndex] = useState<number | undefined>(undefined);
+
+  // Reset Confirmation & Previous Configuration Backup State
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [previousMenuBackup, setPreviousMenuBackup] = useState<WeeklyMenuData | null>(() => {
+    try {
+      const stored = localStorage.getItem('chefs_club_previous_menu_backup');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Export state
   const [isExporting, setIsExporting] = useState(false);
@@ -179,62 +198,26 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 1c. Automatically restore custom dish photos for Wednesday & Thursday if Firestore previously failed due to doc size
+  // 1c. Hydrate photos and previous menu backup from IndexedDB (preserves all user photos beyond localStorage quota)
   useEffect(() => {
-    if (!photos || photos.length === 0) return;
-
-    setMenuData((prev) => {
-      let changed = false;
-      const newDays = { ...prev.days };
-
-      // Wednesday plat 1: "Sauté de poulet asiatique Nouille chinoise"
-      const wedDay = newDays.wednesday;
-      if (wedDay && wedDay.dishes && wedDay.dishes[0]) {
-        const d0 = wedDay.dishes[0];
-        const isDefault = !d0.imageUrl || d0.imageUrl.includes('photo-1568901346375-23c9450c58cd');
-        if (isDefault) {
-          const match = photos.find(
-            (p) =>
-              p.id === 'custom-photo-1789631942499' ||
-              p.name.toLowerCase().includes('sautédepoulet') ||
-              p.name.toLowerCase().includes('pouletnouille')
-          );
-          if (match && match.url) {
-            const updatedDishes = [...wedDay.dishes];
-            updatedDishes[0] = { ...d0, imageUrl: match.url };
-            newDays.wednesday = { ...wedDay, dishes: updatedDishes };
-            changed = true;
-          }
+    loadPhotosFromIndexedDb()
+      .then((idbPhotos) => {
+        if (idbPhotos && idbPhotos.length > 0) {
+          setPhotos((current) => {
+            const merged = deduplicatePhotoList([...idbPhotos, ...current]);
+            merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            return merged;
+          });
         }
-      }
+      })
+      .catch((err) => console.warn('IndexedDB initial photos load failed', err));
 
-      // Thursday plat 1: "Saucisse de Toulouse Lentilles"
-      const thuDay = newDays.thursday;
-      if (thuDay && thuDay.dishes && thuDay.dishes[0]) {
-        const d0 = thuDay.dishes[0];
-        const isDefault = !d0.imageUrl || d0.imageUrl.includes('photo-1504674900247-0877df9cc836');
-        if (isDefault) {
-          const match = photos.find(
-            (p) =>
-              p.id === 'custom-photo-1789632162431' ||
-              p.name.toLowerCase().includes('saucisseslentille') ||
-              p.name.toLowerCase().includes('saucisse')
-          );
-          if (match && match.url) {
-            const updatedDishes = [...thuDay.dishes];
-            updatedDishes[0] = { ...d0, imageUrl: match.url };
-            newDays.thursday = { ...thuDay, dishes: updatedDishes };
-            changed = true;
-          }
-        }
+    loadMenuBackupFromIndexedDb().then((backup) => {
+      if (backup) {
+        setPreviousMenuBackup(backup);
       }
-
-      if (changed) {
-        return { ...prev, days: newDays };
-      }
-      return prev;
     });
-  }, [photos]);
+  }, []);
 
   // 1d. Subscribe to Cloud Backgrounds from Firestore
   useEffect(() => {
@@ -452,8 +435,13 @@ export default function App() {
         console.warn('Custom photo compression fallback', err);
       }
     }
+    // Safeguard originalUrl to prevent bloated memory/storage
+    if (cleanPhoto.originalUrl && cleanPhoto.originalUrl.length > 120000) {
+      cleanPhoto = { ...cleanPhoto, originalUrl: cleanPhoto.url };
+    }
     setPhotos((prev) => [cleanPhoto, ...prev]);
-    showToast('Photo ajoutée et synchronisée au Cloud');
+    saveSinglePhotoToIndexedDb(cleanPhoto).catch((e) => console.warn('IDB photo save error', e));
+    showToast('Photo ajoutée et synchronisée');
     setCloudSyncStatus('saving');
     try {
       await savePhotoToCloud(cleanPhoto);
@@ -467,15 +455,20 @@ export default function App() {
 
   const handleUpdatePhoto = async (updatedPhoto: PhotoLibraryItem) => {
     lastUserEditTime.current = Date.now();
-    const oldPhoto = photos.find((p) => p.id === updatedPhoto.id);
+    let cleanPhoto = updatedPhoto;
+    if (cleanPhoto.originalUrl && cleanPhoto.originalUrl.length > 120000) {
+      cleanPhoto = { ...cleanPhoto, originalUrl: cleanPhoto.url };
+    }
+    const oldPhoto = photos.find((p) => p.id === cleanPhoto.id);
     const oldUrl = oldPhoto?.url;
 
-    setPhotos((prev) => prev.map((p) => (p.id === updatedPhoto.id ? updatedPhoto : p)));
+    setPhotos((prev) => prev.map((p) => (p.id === cleanPhoto.id ? cleanPhoto : p)));
+    saveSinglePhotoToIndexedDb(cleanPhoto).catch((e) => console.warn('IDB photo save error', e));
     showToast('Photo mise à jour dans le Cloud');
     setCloudSyncStatus('saving');
 
     // If any dish or cover photo was referencing the old photo URL, update it immediately
-    if (oldUrl && oldUrl !== updatedPhoto.url) {
+    if (oldUrl && oldUrl !== cleanPhoto.url) {
       setMenuData((prev) => {
         let changed = false;
         const newDays = { ...prev.days };
@@ -485,7 +478,7 @@ export default function App() {
             const updatedDishes = day.dishes.map((d) => {
               if (d.imageUrl === oldUrl) {
                 changed = true;
-                return { ...d, imageUrl: updatedPhoto.url };
+                return { ...d, imageUrl: cleanPhoto.url };
               }
               return d;
             });
@@ -498,7 +491,7 @@ export default function App() {
         let newFeatured = prev.cover.featuredPhotos;
         if (newFeatured && newFeatured.some((u) => u === oldUrl)) {
           changed = true;
-          newFeatured = newFeatured.map((u) => (u === oldUrl ? updatedPhoto.url : u));
+          newFeatured = newFeatured.map((u) => (u === oldUrl ? cleanPhoto.url : u));
         }
 
         if (changed) {
@@ -516,7 +509,7 @@ export default function App() {
     }
 
     try {
-      await savePhotoToCloud(updatedPhoto);
+      await savePhotoToCloud(cleanPhoto);
       setCloudSyncStatus('synced');
       setLastCloudSyncTime(new Date());
     } catch (err) {
@@ -527,6 +520,7 @@ export default function App() {
 
   const handleDeletePhoto = async (id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
+    deletePhotoFromIndexedDb(id).catch((e) => console.warn('IDB photo delete error', e));
     showToast('Photo supprimée de la bibliothèque');
     try {
       await deletePhotoFromCloud(id);
@@ -685,23 +679,67 @@ export default function App() {
     showToast('Menu gastronomique de saison chargé');
   };
 
+  // Reset & Undo Previous Configuration Handlers
+  const handlePromptReset = () => {
+    setIsResetConfirmOpen(true);
+  };
+
+  const handleConfirmReset = () => {
+    // 1. Snapshot current menu configuration so user can easily revert!
+    const currentSnapshot = JSON.parse(JSON.stringify(menuDataRef.current));
+    setPreviousMenuBackup(currentSnapshot);
+    try {
+      localStorage.setItem('chefs_club_previous_menu_backup', JSON.stringify(currentSnapshot));
+      saveMenuBackupToIndexedDb(currentSnapshot).catch((e) => console.warn('IDB backup save error', e));
+    } catch (e) {
+      console.warn('Could not store reset backup in localStorage', e);
+    }
+
+    // 2. Perform reset
+    handleResetToBlank();
+    setIsResetConfirmOpen(false);
+    showToast('Menu réinitialisé. Vous pouvez revenir à la configuration précédente à tout moment.');
+  };
+
+  const handleRevertToPreviousConfig = () => {
+    if (!previousMenuBackup) {
+      showToast('Aucune configuration précédente enregistrée');
+      return;
+    }
+
+    const currentSnapshot = JSON.parse(JSON.stringify(menuDataRef.current));
+    lastUserEditTime.current = Date.now();
+    setMenuData(previousMenuBackup);
+    saveMenuData(previousMenuBackup);
+
+    // Swap backup so user can also toggle back if they want
+    setPreviousMenuBackup(currentSnapshot);
+    try {
+      localStorage.setItem('chefs_club_previous_menu_backup', JSON.stringify(currentSnapshot));
+      saveMenuBackupToIndexedDb(currentSnapshot).catch((e) => console.warn('IDB backup swap error', e));
+    } catch (e) {}
+
+    showToast('Configuration précédente restaurée avec succès !');
+  };
+
   const handleResetToBlank = () => {
     const blankMenu: WeeklyMenuData = {
       id: 'blank-week',
       weekLabel: 'Menu de la Semaine',
-      templateId: 'classic-navy',
+      templateId: menuData.templateId || 'classic-navy',
+      backgroundOpacity: menuData.backgroundOpacity ?? 70,
       cover: {
         id: 'cover',
-        brandName: "CHEF'S CLUB",
-        title: "Chef's Club vous présente le menu de la semaine",
+        brandName: menuData.cover?.brandName || "CHEF'S CLUB",
+        title: 'MENU DE LA SEMAINE',
         subtitlePrefix: 'du',
-        startDate: '01 Septembre',
+        startDate: menuData.cover?.startDate || '01 Septembre',
         subtitleMiddle: 'au',
-        endDate: '05 Septembre',
-        year: '2026',
-        tagline: 'Cuisine fraîche & de saison au restaurant d\'entreprise',
-        backgroundId: DEFAULT_BACKGROUNDS[0].id,
-        featuredPhotos: [DEFAULT_PHOTOS[0].url, DEFAULT_PHOTOS[1].url, DEFAULT_PHOTOS[2].url],
+        endDate: menuData.cover?.endDate || '05 Septembre',
+        year: menuData.cover?.year || '2026',
+        tagline: '',
+        backgroundId: menuData.cover?.backgroundId || DEFAULT_BACKGROUNDS[0].id,
+        featuredPhotos: [],
       },
       days: {
         monday: {
@@ -1110,11 +1148,26 @@ export default function App() {
               <span className="hidden md:inline">Galerie Photos</span> ({photos.length})
             </button>
 
-            {/* Reset / Sample Menu */}
+            {/* Revert / Restore Previous Configuration Button */}
+            {previousMenuBackup && (
+              <button
+                type="button"
+                onClick={handleRevertToPreviousConfig}
+                className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer animate-in fade-in"
+                title="Annuler la réinitialisation et restaurer la précédente configuration du menu"
+              >
+                <Undo2 className="w-3.5 h-3.5 text-amber-700" />
+                <span className="hidden sm:inline">Revenir à la précédente configuration</span>
+                <span className="sm:hidden">Précédent</span>
+              </button>
+            )}
+
+            {/* Reset / Sample Menu (with confirmation) */}
             <button
-              onClick={handleResetToBlank}
-              className="p-2 bg-white/60 hover:bg-white/90 text-slate-500 hover:text-red-600 border border-white/80 rounded-xl transition-all shadow-xs"
-              title="Vider et réinitialiser le menu"
+              type="button"
+              onClick={handlePromptReset}
+              className="p-2 bg-white/60 hover:bg-white/90 text-slate-500 hover:text-red-600 border border-white/80 rounded-xl transition-all shadow-xs cursor-pointer"
+              title="Vider et réinitialiser le menu (avec confirmation)"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -1154,6 +1207,7 @@ export default function App() {
                 onOpenAllergenModal={handleOpenAllergenModal}
                 onOpenTypographyModal={handleOpenTypographyModal}
                 onLoadExampleMenu={handleLoadExample}
+                onAddPhoto={handleAddCustomPhoto}
               />
             </div>
 
@@ -1394,6 +1448,54 @@ export default function App() {
         allergensList={allergensList}
         initialTab={typographyModalTab}
       />
+
+      {/* Reset Confirmation Modal */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-red-100 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Réinitialiser le menu ?
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Cette action réinitialise les plats de la semaine.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 border border-amber-200/90 rounded-xl text-xs text-amber-900 space-y-1.5">
+              <p className="font-semibold text-slate-900">
+                Votre configuration actuelle sera conservée :
+              </p>
+              <p className="text-amber-800">
+                Vous pourrez à tout moment revenir en arrière grâce au bouton <strong className="font-bold text-amber-950">« Revenir à la précédente configuration »</strong> situé dans la barre en haut.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReset}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Confirmer la réinitialisation</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -165,7 +165,11 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
 
             {/* Main Title - strictly single-line to avoid any divider collision */}
             {(() => {
-              const titleText = (coverData.title || 'Le Menu de la Semaine').trim();
+              const raw = (coverData.title || '').trim();
+              const titleText =
+                !raw || raw.toLowerCase().includes('vous présente')
+                  ? 'MENU DE LA SEMAINE'
+                  : raw;
               const isLongTitle = titleText.length > 22;
               return (
                 <h1

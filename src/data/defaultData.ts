@@ -173,7 +173,7 @@ export const INITIAL_WEEKLY_MENU: WeeklyMenuData = {
   cover: {
     id: 'cover',
     brandName: "CHEF'S CLUB",
-    title: "Chef's Club vous présente le menu de la semaine",
+    title: 'MENU DE LA SEMAINE',
     subtitlePrefix: 'du',
     startDate: '31 Août',
     subtitleMiddle: 'au',

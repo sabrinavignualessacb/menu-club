@@ -21,8 +21,8 @@ function cleanPhotoForCloud(photo: PhotoLibraryItem): Record<string, any> {
   const clean: Record<string, any> = {};
   for (const [key, val] of Object.entries(photo)) {
     if (val !== undefined) {
-      // If originalUrl is unreasonably huge, don't store it in Firestore to save space
-      if (key === 'originalUrl' && typeof val === 'string' && val.length > 250000) {
+      // Strip redundant originalUrl if identical to url or oversized to stay comfortably under Firestore limit
+      if (key === 'originalUrl' && (val === photo.url || (typeof val === 'string' && val.length > 100000))) {
         continue;
       }
       clean[key] = val;
@@ -86,7 +86,7 @@ export function subscribeToCloudMenu(
               cover: meta.cover || {
                 id: 'cover',
                 brandName: "LE CHEF'S CLUB",
-                title: 'Menu de la Semaine',
+                title: 'MENU DE LA SEMAINE',
                 subtitlePrefix: 'Du',
                 startDate: 'Lundi',
                 subtitleMiddle: 'au',
