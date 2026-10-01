@@ -73,9 +73,15 @@ async function prepareElementForCapture(element: HTMLElement): Promise<void> {
         document.fonts.load("700 24px 'Cormorant Garamond'"),
         document.fonts.load("600 24px 'Cormorant Garamond'"),
         document.fonts.load("700 30px 'Playfair Display'"),
+        document.fonts.load("600 30px 'Playfair Display'"),
         document.fonts.load("700 44px 'Dancing Script'"),
+        document.fonts.load("600 44px 'Dancing Script'"),
         document.fonts.load("700 16px 'Plus Jakarta Sans'"),
+        document.fonts.load("600 16px 'Plus Jakarta Sans'"),
         document.fonts.load("700 16px 'Cinzel'"),
+        document.fonts.load("600 16px 'Cinzel'"),
+        document.fonts.load("700 16px 'Outfit'"),
+        document.fonts.load("600 16px 'Outfit'"),
         document.fonts.ready,
       ]);
     } catch {
@@ -121,7 +127,7 @@ async function prepareElementForCapture(element: HTMLElement): Promise<void> {
   );
 
   // Micro-delay to let browser finish layout and paint passes
-  await new Promise((r) => setTimeout(r, 60));
+  await new Promise((r) => setTimeout(r, 80));
 }
 
 /**
@@ -134,19 +140,28 @@ async function captureElementToDataUrl(
   const container = document.getElementById('export-nodes-container');
   const originalContainerOpacity = container ? container.style.opacity : undefined;
   const originalContainerVisibility = container ? container.style.visibility : undefined;
+  const originalContainerZIndex = container ? container.style.zIndex : undefined;
 
   // Temporarily reveal capture node to the layout engine (behind viewport)
   if (container) {
     container.style.opacity = '1';
     container.style.visibility = 'visible';
+    container.style.zIndex = '-1000';
+  }
+
+  // Isolate current element among siblings
+  const parent = element.parentElement;
+  if (parent) {
+    Array.from(parent.children).forEach((child) => {
+      if (child instanceof HTMLElement && child !== element) {
+        child.style.display = 'none';
+      }
+    });
+    element.style.display = 'block';
   }
 
   try {
     await prepareElementForCapture(element);
-
-    const rect = element.getBoundingClientRect();
-    const width = rect.width || 1080;
-    const scale = targetResolution / width;
 
     // 1. Primary engine: html-to-image with embedded base64 fonts & skipFonts
     try {
@@ -163,7 +178,7 @@ async function captureElementToDataUrl(
         fontEmbedCSS: EMBEDDED_FONTS_CSS,
         filter: () => true,
       });
-      if (dataUrl && dataUrl.length > 500) {
+      if (dataUrl && dataUrl.length > 1000) {
         return dataUrl;
       }
     } catch (err) {
@@ -172,14 +187,12 @@ async function captureElementToDataUrl(
 
     // 2. Secondary fallback engine: html2canvas
     const canvas = await html2canvas(element, {
-      scale: Math.max(1, scale),
+      scale: targetResolution / 1080,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       width: 1080,
       height: 1080,
-      x: 0,
-      y: 0,
       scrollX: 0,
       scrollY: 0,
       windowWidth: 1080,
@@ -189,9 +202,17 @@ async function captureElementToDataUrl(
 
     return canvas.toDataURL('image/png', 0.98);
   } finally {
+    if (parent) {
+      Array.from(parent.children).forEach((child) => {
+        if (child instanceof HTMLElement) {
+          child.style.display = '';
+        }
+      });
+    }
     if (container && originalContainerOpacity !== undefined) {
       container.style.opacity = originalContainerOpacity;
       container.style.visibility = originalContainerVisibility || 'visible';
+      container.style.zIndex = originalContainerZIndex || '-99999';
     }
   }
 }

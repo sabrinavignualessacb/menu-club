@@ -86,9 +86,9 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
         {/* Clean white backdrop behind the menu card */}
         <div className="absolute inset-0 bg-white" />
 
-        {/* 2. Main Card Container - with selectable background image & template overlay */}
+        {/* 2. Main Card Container - Symmetrical, Balanced, Centered */}
         <div
-          className={`relative w-[670px] h-[670px] shadow-2xl flex flex-col justify-between p-8 rounded-tl-[48px] rounded-tr-2xl rounded-br-2xl rounded-bl-2xl text-center overflow-hidden ring-1 ring-black/5`}
+          className={`relative w-[670px] h-[670px] shadow-2xl flex flex-col justify-between p-8 rounded-3xl text-center overflow-hidden ring-1 ring-black/5 mx-auto my-auto`}
         >
           {/* Base pure white card surface */}
           <div className="absolute inset-0 bg-white" />
@@ -109,37 +109,41 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             className={`absolute inset-0 bg-gradient-to-b ${template.cardBgGradient} opacity-20 pointer-events-none`}
           />
 
-          {/* Outer Border with decorative top-left rounded corner */}
+          {/* Symmetrical Outer Border with 4 balanced corner accents */}
           <div
             style={{ borderColor: template.borderColor }}
-            className="absolute inset-3.5 border-[2.5px] pointer-events-none rounded-tl-[38px] rounded-tr-xl rounded-br-xl rounded-bl-xl z-10"
+            className="absolute inset-4 border-[2px] pointer-events-none rounded-2xl z-10"
           >
-            {/* Subtle inner corner accents */}
+            {/* 4 Identical, perfectly centered corner accents */}
             <div
-              style={{ borderColor: `${template.borderColor}66` }}
-              className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2"
+              style={{ borderColor: `${template.borderColor}80` }}
+              className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2"
             />
             <div
-              style={{ borderColor: `${template.borderColor}66` }}
-              className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2"
+              style={{ borderColor: `${template.borderColor}80` }}
+              className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2"
             />
             <div
-              style={{ borderColor: `${template.borderColor}66` }}
-              className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2"
+              style={{ borderColor: `${template.borderColor}80` }}
+              className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2"
+            />
+            <div
+              style={{ borderColor: `${template.borderColor}80` }}
+              className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2"
             />
           </div>
 
           {/* 3. Header: Crest & Brand */}
-          <header className="relative z-10 pt-2 flex flex-col items-center">
-            <div className="flex items-center gap-3 mb-2">
-              <span style={{ backgroundColor: `${template.accentColor}99` }} className="h-px w-10" />
+          <header className="relative z-10 pt-2 flex flex-col items-center justify-center w-full text-center">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              <span style={{ backgroundColor: `${template.accentColor}99` }} className="h-px w-12" />
               <div
                 style={{ backgroundColor: template.crestBg, color: template.crestIconColor }}
                 className="w-10 h-10 rounded-full flex items-center justify-center shadow-md border border-white/20"
               >
                 <ChefHat className="w-5 h-5" />
               </div>
-              <span style={{ backgroundColor: `${template.accentColor}99` }} className="h-px w-10" />
+              <span style={{ backgroundColor: `${template.accentColor}99` }} className="h-px w-12" />
             </div>
 
             <h2
@@ -147,18 +151,18 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
                 color: template.primaryColor,
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
-              className="text-sm font-extrabold tracking-[0.3em] uppercase"
+              className="text-sm font-extrabold tracking-[0.2em] uppercase text-center w-full"
             >
               {coverData.brandName || "CHEF'S CLUB"}
             </h2>
           </header>
 
-          {/* 4. Center Title, Emblem & Dates */}
-          <main className="relative z-10 flex flex-col items-center my-auto py-2 px-4 w-full">
+          {/* 4. Center Title, Emblem & Dates - Evenly spaced & centered */}
+          <main className="relative z-10 flex-1 flex flex-col items-center justify-around py-3 px-6 w-full text-center my-auto">
             {/* Introductory mention */}
             <p
               style={{ fontFamily: resolvedTitleFont }}
-              className="italic text-slate-600 text-[17px] mb-1 text-center whitespace-nowrap"
+              className="italic text-slate-600 text-[18px] text-center whitespace-nowrap mb-0.5"
             >
               vous présente
             </p>
@@ -178,8 +182,8 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
                     fontFamily: resolvedTitleFont,
                     fontWeight: 700,
                   }}
-                  className={`tracking-tight uppercase leading-tight mb-2 text-center whitespace-nowrap ${
-                    isLongTitle ? 'text-[25px]' : 'text-[29px]'
+                  className={`tracking-normal uppercase leading-tight text-center whitespace-nowrap mb-1.5 ${
+                    isLongTitle ? 'text-[26px]' : 'text-[32px]'
                   }`}
                 >
                   {titleText}
@@ -188,7 +192,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             })()}
 
             {/* Template-aware accent divider */}
-            <div className="flex items-center gap-3 mt-1 mb-3.5 w-3/4 max-w-xs justify-center shrink-0">
+            <div className="flex items-center justify-center gap-3 my-1 w-52 max-w-xs mx-auto shrink-0">
               <span
                 style={{
                   background: `linear-gradient(to right, transparent, ${template.primaryColor}, ${template.accentColor})`,
@@ -237,7 +241,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
                     backgroundColor: template.primaryColor,
                     fontFamily: "'Plus Jakarta Sans', sans-serif",
                   }}
-                  className={`mt-1 mb-3 inline-flex items-center justify-center gap-2.5 text-white rounded-full shadow-lg border border-white/20 transition-all shrink-0 ${activeStyle.container}`}
+                  className={`my-2 inline-flex items-center justify-center gap-2.5 text-white rounded-full shadow-lg border border-white/20 transition-all shrink-0 mx-auto ${activeStyle.container}`}
                 >
                   <Calendar style={{ color: template.crestIconColor }} className={`${activeStyle.calendarSize} shrink-0`} />
                   <span className="font-semibold tracking-wide whitespace-nowrap">
@@ -256,7 +260,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             })()}
 
             {/* Central Culinary Emblem */}
-            <div className="my-2 flex flex-col items-center shrink-0">
+            <div className="my-2 flex flex-col items-center justify-center shrink-0 mx-auto">
               <div
                 style={{ borderColor: `${template.accentColor}80` }}
                 className="w-14 h-14 rounded-full bg-amber-50/70 border-2 shadow-inner flex items-center justify-center"
@@ -283,7 +287,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
                     fontFamily: "'Dancing Script', cursive",
                     fontWeight: 700,
                   }}
-                  className="text-[44px] drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
+                  className="text-[48px] drop-shadow-xs my-1 text-center shrink-0 whitespace-nowrap leading-none mx-auto"
                 >
                   {displayTagline}
                 </p>
@@ -298,7 +302,7 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
           >
             <p
               style={{ fontFamily: resolvedTitleFont }}
-              className="italic text-[12.5px] text-slate-500 text-center tracking-wide whitespace-nowrap"
+              className="italic text-[13px] text-slate-500 text-center tracking-wide whitespace-nowrap mx-auto"
             >
               Photos non contractuelles
             </p>

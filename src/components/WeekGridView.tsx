@@ -93,6 +93,7 @@ export const WeekGridView: React.FC<WeekGridViewProps> = ({
                     backgrounds={backgrounds}
                     templateId={menuData.templateId}
                     backgroundOpacity={menuData.backgroundOpacity}
+                    typography={menuData.typography}
                     id={`grid-card-${item.id}`}
                   />
                 ) : (

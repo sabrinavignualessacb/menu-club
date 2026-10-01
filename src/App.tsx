@@ -211,6 +211,20 @@ export default function App() {
 
   // 1c. Hydrate photos and previous menu backup from IndexedDB (preserves all user photos beyond localStorage quota)
   useEffect(() => {
+    // Normalize cover tagline to "Bon Appétit !" if empty or legacy string
+    setMenuData((prev) => {
+      const tag = (prev.cover.tagline || '').trim().toLowerCase();
+      if (!tag || tag.includes('fraiche') || tag.includes('fraîche') || tag.includes('restaurant') || tag.includes('cuisine maison')) {
+        const updated = {
+          ...prev,
+          cover: { ...prev.cover, tagline: 'Bon Appétit !' },
+        };
+        saveMenuData(updated);
+        return updated;
+      }
+      return prev;
+    });
+
     loadPhotosFromIndexedDb()
       .then((idbPhotos) => {
         if (idbPhotos && idbPhotos.length > 0) {
@@ -1276,7 +1290,7 @@ export default function App() {
         />
       </main>
 
-      {/* 4. OFF-SCREEN 1080x1080 CAPTURE NODES (Rendered at origin 0,0 behind all layers so font metrics & wrapping match live screen 100%) */}
+      {/* 4. OFF-SCREEN 1080x1080 CAPTURE NODES (All pinned at top-0 left-0 so each node captures at origin 0,0 without clipping) */}
       <div
         id="export-nodes-container"
         style={{
@@ -1293,7 +1307,7 @@ export default function App() {
         aria-hidden="true"
       >
         {/* Cover Page */}
-        <div ref={exportTargetCoverRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
+        <div ref={exportTargetCoverRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden absolute top-0 left-0">
           <CoverVisualCard
             coverData={menuData.cover}
             backgrounds={backgrounds}
@@ -1305,7 +1319,7 @@ export default function App() {
         </div>
 
         {/* Monday */}
-        <div ref={exportTargetMondayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
+        <div ref={exportTargetMondayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden absolute top-0 left-0">
           <DayVisualCard
             dayMenu={menuData.days.monday}
             backgrounds={backgrounds}
@@ -1318,7 +1332,7 @@ export default function App() {
         </div>
 
         {/* Tuesday */}
-        <div ref={exportTargetTuesdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
+        <div ref={exportTargetTuesdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden absolute top-0 left-0">
           <DayVisualCard
             dayMenu={menuData.days.tuesday}
             backgrounds={backgrounds}
@@ -1331,7 +1345,7 @@ export default function App() {
         </div>
 
         {/* Wednesday */}
-        <div ref={exportTargetWednesdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
+        <div ref={exportTargetWednesdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden absolute top-0 left-0">
           <DayVisualCard
             dayMenu={menuData.days.wednesday}
             backgrounds={backgrounds}
@@ -1344,7 +1358,7 @@ export default function App() {
         </div>
 
         {/* Thursday */}
-        <div ref={exportTargetThursdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
+        <div ref={exportTargetThursdayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden absolute top-0 left-0">
           <DayVisualCard
             dayMenu={menuData.days.thursday}
             backgrounds={backgrounds}
@@ -1357,7 +1371,7 @@ export default function App() {
         </div>
 
         {/* Friday */}
-        <div ref={exportTargetFridayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden relative">
+        <div ref={exportTargetFridayRef} className="w-[1080px] h-[1080px] bg-white overflow-hidden absolute top-0 left-0">
           <DayVisualCard
             dayMenu={menuData.days.friday}
             backgrounds={backgrounds}

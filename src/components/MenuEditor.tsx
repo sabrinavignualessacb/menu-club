@@ -1044,7 +1044,15 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                 <input
                   type="text"
                   placeholder="Bon Appétit !"
-                  value={menuData.cover.tagline || 'Bon Appétit !'}
+                  value={
+                    !menuData.cover.tagline ||
+                    menuData.cover.tagline.toLowerCase().includes('fraîche') ||
+                    menuData.cover.tagline.toLowerCase().includes('fraiche') ||
+                    menuData.cover.tagline.toLowerCase().includes('restaurant') ||
+                    menuData.cover.tagline.toLowerCase().includes('cuisine maison')
+                      ? 'Bon Appétit !'
+                      : menuData.cover.tagline
+                  }
                   onChange={(e) => {
                     const val = e.target.value;
                     onUpdateMenu((prev) => ({
