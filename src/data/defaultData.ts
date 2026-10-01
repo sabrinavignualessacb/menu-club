@@ -179,7 +179,7 @@ export const INITIAL_WEEKLY_MENU: WeeklyMenuData = {
     subtitleMiddle: 'au',
     endDate: '04 Septembre',
     year: '2026',
-    tagline: '',
+    tagline: 'Bon Appétit !',
     backgroundId: 'bg-kitchen-warm',
     backgroundOpacity: 70,
     featuredPhotos: [],

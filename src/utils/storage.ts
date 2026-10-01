@@ -110,6 +110,16 @@ export function loadMenuData(): WeeklyMenuData {
         ) {
           parsed.cover.title = 'MENU DE LA SEMAINE';
         }
+        // Normalize cover tagline to "Bon Appétit !" if empty or legacy string
+        if (
+          !parsed.cover.tagline ||
+          parsed.cover.tagline.toLowerCase().includes('fraîche') ||
+          parsed.cover.tagline.toLowerCase().includes('fraiche') ||
+          parsed.cover.tagline.toLowerCase().includes('restaurant') ||
+          parsed.cover.tagline.toLowerCase().includes('cuisine maison')
+        ) {
+          parsed.cover.tagline = 'Bon Appétit !';
+        }
         return parsed;
       }
     }

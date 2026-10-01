@@ -92,7 +92,7 @@ export function subscribeToCloudMenu(
                 subtitleMiddle: 'au',
                 endDate: 'Vendredi',
                 year: '2026',
-                tagline: 'Cuisine Maison & Produits Frais',
+                tagline: 'Bon Appétit !',
                 backgroundId: 'bg-slate-dark',
                 featuredPhotos: [],
               },

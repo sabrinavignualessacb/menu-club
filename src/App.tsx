@@ -154,6 +154,17 @@ export default function App() {
             return;
           }
 
+          // Normalize cover tagline to "Bon Appétit !" if empty or legacy string
+          if (
+            !cloudMenu.cover.tagline ||
+            cloudMenu.cover.tagline.toLowerCase().includes('fraîche') ||
+            cloudMenu.cover.tagline.toLowerCase().includes('fraiche') ||
+            cloudMenu.cover.tagline.toLowerCase().includes('restaurant') ||
+            cloudMenu.cover.tagline.toLowerCase().includes('cuisine maison')
+          ) {
+            cloudMenu.cover.tagline = 'Bon Appétit !';
+          }
+
           const incomingJson = JSON.stringify(cloudMenu);
           const currentLocalJson = JSON.stringify(menuDataRef.current);
 
@@ -737,7 +748,7 @@ export default function App() {
         subtitleMiddle: 'au',
         endDate: menuData.cover?.endDate || '05 Septembre',
         year: menuData.cover?.year || '2026',
-        tagline: '',
+        tagline: 'Bon Appétit !',
         backgroundId: menuData.cover?.backgroundId || DEFAULT_BACKGROUNDS[0].id,
         featuredPhotos: [],
       },

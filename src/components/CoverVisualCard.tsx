@@ -266,16 +266,29 @@ export const CoverVisualCard: React.FC<CoverVisualCardProps> = ({
             </div>
 
             {/* Tagline */}
-            <p
-              style={{
-                color: template.accentColor,
-                fontFamily: "'Dancing Script', cursive",
-                fontWeight: 700,
-              }}
-              className="text-[44px] drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
-            >
-              {coverData.tagline || 'Bon Appétit !'}
-            </p>
+            {(() => {
+              const rawTagline = (coverData.tagline || '').trim();
+              const isLegacyTagline =
+                !rawTagline ||
+                rawTagline.toLowerCase().includes('fraîche') ||
+                rawTagline.toLowerCase().includes('fraiche') ||
+                rawTagline.toLowerCase().includes('restaurant') ||
+                rawTagline.toLowerCase().includes('cuisine maison');
+              const displayTagline = isLegacyTagline ? 'Bon Appétit !' : rawTagline;
+
+              return (
+                <p
+                  style={{
+                    color: template.accentColor,
+                    fontFamily: "'Dancing Script', cursive",
+                    fontWeight: 700,
+                  }}
+                  className="text-[44px] drop-shadow-xs mt-1 shrink-0 whitespace-nowrap leading-none"
+                >
+                  {displayTagline}
+                </p>
+              );
+            })()}
           </main>
 
           {/* 5. Footer Mention */}

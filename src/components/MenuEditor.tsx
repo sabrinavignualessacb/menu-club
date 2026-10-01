@@ -1036,6 +1036,26 @@ export const MenuEditor: React.FC<MenuEditorProps> = ({
                 />
               </div>
 
+              {/* Cover Tagline / Signature */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Signature calligraphiée en bas (slogan)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Bon Appétit !"
+                  value={menuData.cover.tagline || 'Bon Appétit !'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    onUpdateMenu((prev) => ({
+                      ...prev,
+                      cover: { ...prev.cover, tagline: val },
+                    }));
+                  }}
+                  className="w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-hidden focus:border-blue-500 focus:bg-white font-semibold shadow-2xs"
+                />
+              </div>
+
               {/* Quick Week Selectors & Date Picker */}
               <div className="p-3 bg-slate-50/90 rounded-xl border border-slate-200/80 space-y-2.5 shadow-2xs">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
